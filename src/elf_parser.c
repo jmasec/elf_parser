@@ -34,8 +34,8 @@ FILE *open_exe(const char* executable_path){
     return fptr;
 }
 
-int read_elf_header(FILE* fptr, elfheader_s* elf_header){
-    size_t count = fread(elf_header, sizeof(elfheader_s), 1, fptr);
+int read_elf_header(FILE* fptr, elfheader_s* hdr){
+    size_t count = fread(hdr, sizeof(elfheader_s), 1, fptr);
     if (count < 1){
         printf("Count: %i\n", count);
         return -1;
@@ -56,12 +56,67 @@ int read_program_header(FILE* fptr, programheader_s* arr, uint16_t num_entries){
     return 0;
 }
 
+int elf_check_file(elfheader_s* hdr){
+    if(!hdr) return -1;
+    if(hdr->e_indent[EI_MAG0] != ELFMAG0){
+        printf("ELF Header EI_MAG0 incorrect..\n");
+        return -1;
+    }
+    if(hdr->e_indent[EI_MAG1] != ELFMAG1){
+        printf("ELF Header EI_MAG1 incorrect..\n");
+        return -1;
+    }
+    if(hdr->e_indent[EI_MAG2] != ELFMAG2){
+        printf("ELF Header EI_MAG2 incorrect..\n");
+        return -1;
+    }
+    if(hdr->e_indent[EI_MAG3] != ELFMAG3){
+        printf("ELF Header EI_MAG3 incorrect..\n");
+        return -1;
+    } 
+    return 0;
+}
+
+int elf_check_supported(elfheader_s* hdr){
+    if(elf_check_file(hdr) != 0){
+        printf("Invalid ELF File.\n");
+        return -1;
+    }
+    if(hdr->e_indent[EI_CLASS] != ELFCLASS64){
+        printf("Unsupported ELF File Class.\n");
+        return -1;
+    }
+    if(hdr->e_indent[EI_DATA] != ELFDATA2LSB){
+        printf("Unsupported ELF File Byte Order.\n");
+        return -1;
+    }
+    if(hdr->e_machine != AMD_x86_64){
+        printf("Unsupported ELF File Target.\n");
+        return -1;
+    }
+    if(hdr->e_indent[EI_VERSION] != EV_CURRENT){
+        printf("Unsupported ELF File version.\n");
+        return -1;
+    }
+    if(hdr->e_type != ET_EXEC){
+        printf("Unsupported ELF File Type.\n");
+        return -1;
+    }
+
+    return 0;
+}
+
 int main(){
     FILE* fptr = open_exe("test");
     elfheader_s* elf_header = calloc(1, sizeof(elfheader_s));
 
     if(read_elf_header(fptr, elf_header) != 0){
         printf("Failed to read in elf header\n");
+        return -1;
+    }
+
+    if(elf_check_supported(elf_header) != 0){
+        return -1;
     }
 
     uint16_t num_entries = elf_header->e_phnum-1;

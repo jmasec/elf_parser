@@ -5,38 +5,52 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-// object file types
-#define ET_NONE 0x00
-#define ET_REL 0x01
-#define ET_EXEC 0x02
-#define ET_DYN 0x03
-#define ET_CORE 0x04
-// not including the reserved ranges here
 
 // OS ABI
 #define LINUX 0x03
 
 // ISA
-#define NoISA 0x00
-#define x86 0x03
-#define MIPS 0x08
-#define ARM 0x28
-#define AMD_x86_64 0x3E
-#define ARM_64 0xB7
-#define RISC_V 0xF3
+#define NoISA       0x00
+#define x86         0x03
+#define MIPS        0x08
+#define ARM         0x28
+#define AMD_x86_64  0x3E
+#define ARM_64      0xB7
+#define RISC_V      0xF3
 
 // elf values
-#define ELFMAG0     0x7f
+#define ELFMAG0             0x7f
+#define ELFMAG1             'E'
+#define ELFMAG2             'L'
+#define ELFMAG3             'F'
+#define ELFCLASS64          2
+#define ELFDATA2LSB         1
+#define ELFOSABI            3
+#define EV_CURRENT          1
+#define AMD_x86_64          0x3e
 
-// e_indent offsets
 #define EI_NINDENT 16
-#define EI_MAG0     0       
-#define EI_CLASS    4
-#define EI_DATA     5
-#define EI_VERSION  6
-#define EI_OSABI    7
-#define EI_ABIVERSION 8
-#define EI_PAD      9
+
+enum elf_types{
+    ET_NONE,
+    ET_REL,
+    ET_EXEC,
+    ET_DYN,
+    ET_CORE
+};
+
+enum elf_indent{
+    EI_MAG0,
+    EI_MAG1,
+    EI_MAG2,
+    EI_MAG3,
+    EI_CLASS,
+    EI_DATA,
+    EI_VERSION,
+    EI_OSABI,
+    EI_ABIVERSION,
+    EI_PAD
+};
 
 typedef struct elfheader_s{
     unsigned char e_indent[EI_NINDENT]; 
