@@ -1,9 +1,9 @@
-
 #include <stdint.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/mman.h>
 
 
 // OS ABI
@@ -27,7 +27,6 @@
 #define ELFDATA2LSB         1
 #define ELFOSABI            3
 #define EV_CURRENT          1
-#define AMD_x86_64          0x3e
 
 #define EI_NINDENT 16
 
@@ -79,7 +78,7 @@ typedef struct elfheader_s{
 // segment dependent flags 
 #define PF_X 1
 #define PF_W 2
-#define PF_R 3
+#define PF_R 4
 
 typedef struct programheader_s{
     uint32_t p_type;
@@ -123,3 +122,5 @@ typedef struct sectionheader_s{
 
 FILE *open_exe(const char* executable_path);
 int read_elf_header(FILE* fptr, elfheader_s* elf_header);
+int elf_check_file(elfheader_s* hdr);
+int elf_check_supported(elfheader_s* hdr);
