@@ -107,31 +107,67 @@ int read_program_header(FILE* fptr, programheader_s* arr, uint16_t num_entries){
     return 0;
 }
 
-int load_program_sections(programheader_s* arr, uint16_t num_entries, int fd){
+reloc_memsz_s* get_total_memsz(programheader_s* arr, uint16_t num_entries, int fd){
+    reloc_memsz_s* r = malloc(sizeof(reloc_memsz_s));
     for(int i = 0; i < num_entries; i++){
         if(arr[i].p_type == PT_LOAD){
             if(arr[i].p_vaddr % arr[i].p_align != 0){
                 printf("Address is not aligned!\n");
                 return -1;
             }
-            int flags = arr[i].p_flags;
-            int diff = arr[i].p_memsz - arr[i].p_filesz;
+            if(r->low_vaddr == 0){
+                r->low_vaddr = arr[i].p_vaddr;
+            }
 
-            int prot = 0;
-            if (flags & PF_R) prot |= PROT_READ;
-            if (flags & PF_W) prot |= PROT_WRITE;
-            if (flags & PF_X) prot |= PROT_EXEC;
-            
-            void* ptr = mmap((void*)arr[i].p_vaddr, arr[i].p_memsz, prot, MAP_ANONYMOUS | MAP_FIXED, -1, 0);
+            if(r->low_vaddr > arr[i].p_vaddr){
+                r->low_vaddr = arr[i].p_vaddr;
+            }
 
-            if(ptr == MAP_FAILED){
-                printf("Map failed\n");
+            if(r->high_vaddr < arr[i].p_vaddr + arr[i].p_memsz){
+                r->high_vaddr = arr[i].p_vaddr + arr[i].p_memsz;
+            }
+
+            // int prot = 0;
+            // if (flags & PF_R) prot |= PROT_READ;
+            // if (flags & PF_W) prot |= PROT_WRITE;
+            // if (flags & PF_X) prot |= PROT_EXEC;
+        }
+    } return r;
+}
+
+void* mmap_total_mem(reloc_memsz_s* reloc_info){
+    size_t total_size = reloc_info->high_vaddr - reloc_info->low_vaddr;
+    return mmap(NULL, total_size, PROT_READ | PROT_WRITE | PROT_EXEC,  MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+}
+
+void load_program_sections(programheader_s* arr, uint16_t num_entries, int fd, void* mem, reloc_memsz_s* reloc_info){
+    char* base_address = (char* )mem;
+    for(int i = 0; i < num_entries; i++){
+        if(arr[i].p_type == PT_LOAD){
+            if(arr[i].p_vaddr % arr[i].p_align != 0){
+                printf("Address is not aligned!\n");
                 return -1;
             }
 
-
+            // logic
+            uintptr_t dst = base_address + (arr[i].p_vaddr - reloc_info->low_vaddr);
+            
         }
-    } return 0;
+    }
+}
+
+void create_child(programheader_s* arr, uint16_t num_entries, int fd){
+    pid_t child_pid;
+
+    child_pid = fork();
+
+    if(child_pid < 0){
+        perror("Fork Failed");
+        exit(1);
+    }
+    else if (child_pid == 0){
+        // mmap
+    }
 }
 
 int main(){
@@ -158,11 +194,9 @@ int main(){
     fseek(fptr, 0, SEEK_SET);
     int fd = fileno(fptr);
 
-    if(load_program_sections(prog_arr, num_entries, fd) != 0){
-        printf("Failed to load in program header\n");
-    }
+    reloc_memsz_s* reloc_data = get_total_memsz(prog_arr, num_entries, fd);
 
-    
+    void* mmap_mem = mmap_total_mem(reloc_data);
 
     free(elf_header);
     fclose(fptr);

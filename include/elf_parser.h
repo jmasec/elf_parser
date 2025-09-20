@@ -120,6 +120,11 @@ typedef struct sectionheader_s{
     size_t sh_entsize;
 }sectionheader_s;
 
+typedef struct reloc_memsz_s{
+    size_t low_vaddr;
+    size_t high_vaddr;
+} reloc_memsz_s;
+
 FILE *open_exe(const char* executable_path);
 int read_elf_header(FILE* fptr, elfheader_s* elf_header);
 int elf_check_file(elfheader_s* hdr);
