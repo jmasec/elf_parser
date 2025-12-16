@@ -21,185 +21,130 @@ ELF Header:
   Size of section headers:           64 (bytes)
   Number of section headers:         28
   Section header string table index: 27
+
+  https://wiki.osdev.org/ELF_Tutorial 
 */
 
-int elf_check_file(elfheader_s* hdr){
-    if(!hdr) return -1;
-    if(hdr->e_indent[EI_MAG0] != ELFMAG0){
+bool elf_check_file(elf64header_s* hdr){
+    if(!hdr) return false;
+    if(hdr->e_ident[EI_MAG0] != ELFMAG0){
         printf("ELF Header EI_MAG0 incorrect..\n");
-        return -1;
+        return false;
     }
-    if(hdr->e_indent[EI_MAG1] != ELFMAG1){
+    if(hdr->e_ident[EI_MAG1] != ELFMAG1){
         printf("ELF Header EI_MAG1 incorrect..\n");
-        return -1;
+        return false;
     }
-    if(hdr->e_indent[EI_MAG2] != ELFMAG2){
+    if(hdr->e_ident[EI_MAG2] != ELFMAG2){
         printf("ELF Header EI_MAG2 incorrect..\n");
-        return -1;
+        return false;
     }
-    if(hdr->e_indent[EI_MAG3] != ELFMAG3){
+    if(hdr->e_ident[EI_MAG3] != ELFMAG3){
         printf("ELF Header EI_MAG3 incorrect..\n");
-        return -1;
+        return false;
     } 
-    return 0;
+    return true;
 }
 
-int elf_check_supported(elfheader_s* hdr){
-    if(elf_check_file(hdr) != 0){
+bool elf_check_supported(elf64header_s* hdr){
+    if(elf_check_file(hdr) != true){
         printf("Invalid ELF File.\n");
-        return -1;
+        return false;
     }
-    if(hdr->e_indent[EI_CLASS] != ELFCLASS64){
+    if(hdr->e_ident[EI_CLASS] != ELFCLASS64){
         printf("Unsupported ELF File Class.\n");
-        return -1;
+        return false;
     }
-    if(hdr->e_indent[EI_DATA] != ELFDATA2LSB){
+    if(hdr->e_ident[EI_DATA] != ELFDATA2LSB){
         printf("Unsupported ELF File Byte Order.\n");
-        return -1;
+        return false;
     }
     if(hdr->e_machine != AMD_x86_64){
         printf("Unsupported ELF File Target.\n");
-        return -1;
+        return false;
     }
-    if(hdr->e_indent[EI_VERSION] != EV_CURRENT){
+    if(hdr->e_ident[EI_VERSION] != EV_CURRENT){
         printf("Unsupported ELF File version.\n");
-        return -1;
+        return false;
     }
-    if(hdr->e_type != ET_EXEC){
-        printf("Unsupported ELF File Type.\n");
-        return -1;
-    }
-
-    return 0;
+    if(hdr->e_type != ET_REL && hdr->e_type != ET_EXEC) {
+		printf("Unsupported ELF File type.\n");
+		return false;
+	}
+    return true;
 }
 
-FILE *open_exe(const char* executable_path){
-    FILE* fptr = fopen(executable_path, "rb");
+int open_exe(const char* executable_path){
+    int fd = open(executable_path, O_RDONLY);
 
-    if(fptr == NULL){
+    if(fd == -1){
         perror("Error opening executable");
-        return NULL;
-    }
-
-    return fptr;
-}
-
-int read_elf_header(FILE* fptr, elfheader_s* hdr){
-    size_t count = fread(hdr, sizeof(elfheader_s), 1, fptr);
-    if (count < 1){
-        printf("Count: %i\n", count);
         return -1;
     }
+
+    return fd;
+}
+
+int read_elf_header(int fd, elf64header_s* elf_hdr){
+    size_t num_bytes = read(fd, elf_hdr, sizeof(elf64header_s));
+    if (num_bytes < 0){
+        printf("Failed read");
+        return -1;
+    }
+
+    if(lseek(fd, 0, SEEK_SET) < 0){
+        printf("Failed lseek");
+        return -1;
+    }
+
     return 0;
 }
 
-int read_program_header(FILE* fptr, programheader_s* arr, uint16_t num_entries){
+int read_program_headers(int fd, elf64programheader_s* phdr_arr, uint16_t num_entries, size_t prog_hdr_offset, uint16_t phent_size){
+    if(lseek(fd, prog_hdr_offset, SEEK_SET) < 0){
+        printf("Failed lseek");
+        return -1;
+    }
     for(int i = 0; i < num_entries; i++){
-        size_t count = fread(arr, sizeof(programheader_s), 1, fptr);
-        printf("Flags: %x\n", arr->p_flags);
-        if(count < 1){
-            printf("Count: %i\n", count);
+        size_t num_bytes = read(fd, phdr_arr,phent_size);
+        if(num_bytes < 0){
+            printf("Count: %i\n", num_bytes);
             return -1;
         }
-        arr++;
+        phdr_arr++;
         
     }
+    if(lseek(fd, 0, SEEK_SET) < 0){
+        printf("Failed lseek");
+        return -1;
+    }
     return 0;
 }
 
-reloc_memsz_s* get_total_memsz(programheader_s* arr, uint16_t num_entries, int fd){
-    reloc_memsz_s* r = malloc(sizeof(reloc_memsz_s));
-    for(int i = 0; i < num_entries; i++){
-        if(arr[i].p_type == PT_LOAD){
-            if(arr[i].p_vaddr % arr[i].p_align != 0){
-                printf("Address is not aligned!\n");
-                return -1;
-            }
-            if(r->low_vaddr == 0){
-                r->low_vaddr = arr[i].p_vaddr;
-            }
-
-            if(r->low_vaddr > arr[i].p_vaddr){
-                r->low_vaddr = arr[i].p_vaddr;
-            }
-
-            if(r->high_vaddr < arr[i].p_vaddr + arr[i].p_memsz){
-                r->high_vaddr = arr[i].p_vaddr + arr[i].p_memsz;
-            }
-
-            // int prot = 0;
-            // if (flags & PF_R) prot |= PROT_READ;
-            // if (flags & PF_W) prot |= PROT_WRITE;
-            // if (flags & PF_X) prot |= PROT_EXEC;
-        }
-    } return r;
+void display_elf_header(elf64header_s* elf_hdr){
+    printf("Elf Header:\n");
+    printf("    Magic: %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x\n", elf_hdr->e_ident[EI_MAG0], elf_hdr->e_ident[EI_MAG1]
+    , elf_hdr->e_ident[EI_MAG2], elf_hdr->e_ident[EI_MAG3], elf_hdr->e_ident[EI_CLASS], elf_hdr->e_ident[EI_DATA]
+    , elf_hdr->e_ident[EI_VERSION], elf_hdr->e_ident[EI_OSABI], elf_hdr->e_ident[EI_ABIVERSION], elf_hdr->e_ident[EI_PAD]
+    , elf_hdr->e_ident[10], elf_hdr->e_ident[11], elf_hdr->e_ident[12], elf_hdr->e_ident[13]
+    , elf_hdr->e_ident[13], elf_hdr->e_ident[14], elf_hdr->e_ident[15], elf_hdr->e_ident[16]);
+    printf("entry: %x\n", elf_hdr->e_entry);
 }
 
-void* mmap_total_mem(reloc_memsz_s* reloc_info){
-    size_t total_size = reloc_info->high_vaddr - reloc_info->low_vaddr;
-    return mmap(NULL, total_size, PROT_READ | PROT_WRITE | PROT_EXEC,  MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-}
+void display_program_headers(elf64programheader_s* phdr_arr, uint16_t prog_num){
+    printf("Program Headers: \n");
+    printf("    %d headers\n", prog_num);
 
-void load_program_sections(programheader_s* arr, uint16_t num_entries, int fd, void* mem, reloc_memsz_s* reloc_info){
-    char* base_address = (char* )mem;
-    for(int i = 0; i < num_entries; i++){
-        if(arr[i].p_type == PT_LOAD){
-            if(arr[i].p_vaddr % arr[i].p_align != 0){
-                printf("Address is not aligned!\n");
-                return -1;
-            }
-
-            // logic
-            uintptr_t dst = base_address + (arr[i].p_vaddr - reloc_info->low_vaddr);
-            
-        }
+    for(int i = 0; i < prog_num; i++){
+        printf("Program Header %d\n", i);
+        printf("    Type: %d\n", phdr_arr[i].p_type);
+        printf("    Offset: %ld\n", phdr_arr[i].p_offset);
+        printf("    Virtual Addr: %ld\n", phdr_arr[i].p_vaddr);
+        printf("    Physical Addr: %ld\n", phdr_arr[i].p_paddr);
+        printf("    File Size: %ld\n", phdr_arr[i].p_filesz);
+        printf("    Mem Size: %ld\n", phdr_arr[i].p_memsz);
+        printf("    Flags: %d\n", phdr_arr[i].p_flags);
+        printf("    Align: %ld\n", phdr_arr[i].p_align);
+        printf("\n\n");
     }
-}
-
-void create_child(programheader_s* arr, uint16_t num_entries, int fd){
-    pid_t child_pid;
-
-    child_pid = fork();
-
-    if(child_pid < 0){
-        perror("Fork Failed");
-        exit(1);
-    }
-    else if (child_pid == 0){
-        // mmap
-    }
-}
-
-int main(){
-    FILE* fptr = open_exe("test");
-    elfheader_s* elf_header = calloc(1, sizeof(elfheader_s));
-
-    if(read_elf_header(fptr, elf_header) != 0){
-        printf("Failed to read in elf header\n");
-        return -1;
-    }
-
-    if(elf_check_supported(elf_header) != 0){
-        return -1;
-    }
-
-    uint16_t num_entries = elf_header->e_phnum-1;
-
-    programheader_s prog_arr[num_entries];
-
-    if(read_program_header(fptr, prog_arr, num_entries) != 0){
-        printf("Failed to read in program header\n");
-    }
-
-    fseek(fptr, 0, SEEK_SET);
-    int fd = fileno(fptr);
-
-    reloc_memsz_s* reloc_data = get_total_memsz(prog_arr, num_entries, fd);
-
-    void* mmap_mem = mmap_total_mem(reloc_data);
-
-    free(elf_header);
-    fclose(fptr);
-
-    return 0;
 }
