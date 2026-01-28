@@ -5,3 +5,4 @@
     2. shellcode to read proc/self/map using syscalls to, fork a process, find memory open to use and then fix ptrs
 
 
+gcc -static -fPIE -pie -nostdlib test.c -o test

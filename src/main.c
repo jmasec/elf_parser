@@ -23,6 +23,8 @@ int main(){
 
     uint16_t num_entries = elf_header->e_phnum-1;
 
+    uintptr_t entry_offset = elf_header->e_entry;
+
     elf64programheader_s prog_arr[num_entries];
     
     if(read_program_headers(fd, prog_arr, num_entries, elf_header->e_phoff, elf_header->e_phentsize) != 0){
@@ -35,7 +37,7 @@ int main(){
 
     // void* mmap_mem = mmap_total_mem(reloc_data);
 
-    create_child(prog_arr, fd, num_entries);
+    create_child(prog_arr, fd, num_entries, entry_offset);
 
     free(elf_header);
     close(fd);

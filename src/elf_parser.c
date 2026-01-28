@@ -137,14 +137,18 @@ void display_program_headers(elf64programheader_s* phdr_arr, uint16_t prog_num){
 
     for(int i = 0; i < prog_num; i++){
         printf("Program Header %d\n", i);
-        printf("    Type: %d\n", phdr_arr[i].p_type);
-        printf("    Offset: %ld\n", phdr_arr[i].p_offset);
-        printf("    Virtual Addr: %ld\n", phdr_arr[i].p_vaddr);
-        printf("    Physical Addr: %ld\n", phdr_arr[i].p_paddr);
-        printf("    File Size: %ld\n", phdr_arr[i].p_filesz);
-        printf("    Mem Size: %ld\n", phdr_arr[i].p_memsz);
-        printf("    Flags: %d\n", phdr_arr[i].p_flags);
-        printf("    Align: %ld\n", phdr_arr[i].p_align);
+        printf("    Type: %x\n", phdr_arr[i].p_type);
+        printf("    Offset: %lx\n", phdr_arr[i].p_offset);
+        printf("    Virtual Addr: %lx\n", phdr_arr[i].p_vaddr);
+        printf("    Physical Addr: %lx\n", phdr_arr[i].p_paddr);
+        printf("    File Size: %lx\n", phdr_arr[i].p_filesz);
+        printf("    Mem Size: %lx\n", phdr_arr[i].p_memsz);
+        printf("    Flags: %x\n", phdr_arr[i].p_flags);
+        printf("    Align: %lx\n", phdr_arr[i].p_align);
         printf("\n\n");
     }
+}
+
+void display_section_headers(elf64sectionheader_s* shdr_arr, uint16_t num_sections){
+
 }

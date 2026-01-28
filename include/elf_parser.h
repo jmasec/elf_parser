@@ -146,7 +146,7 @@ typedef struct elf64programheader_s{
 #define SHF_MERGE       4
 #define SHF_STRINGS     5
 
-typedef struct sectionheader_s{
+typedef struct elf64sectionheader_s{
     uint32_t sh_name;
     uint32_t sh_type;
     uint32_t sh_flags;
@@ -157,7 +157,7 @@ typedef struct sectionheader_s{
     uint32_t sh_info;;
     size_t sh_addralign;
     size_t sh_entsize;
-}sectionheader_s;
+}elf64sectionheader_s;
 
 int open_exe(const char* executable_path);
 int read_elf_header(int fd, elf64header_s* elf_header);
@@ -166,5 +166,6 @@ bool elf_check_file(elf64header_s* hdr);
 bool elf_check_supported(elf64header_s* hdr);
 void display_elf_header(elf64header_s* elf_hdr);
 void display_program_headers(elf64programheader_s* phdr_arr, uint16_t prog_count);
+void display_section_headers(elf64sectionheader_s* shdr_arr, uint16_t num_sections);
 
 #endif

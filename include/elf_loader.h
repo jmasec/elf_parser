@@ -12,10 +12,13 @@
 
 // } phdr_description_s;
 
+
+
 size_t prog_section_size(elf64programheader_s *phdr_arr, uint16_t num_entries);
-void create_child(elf64programheader_s* arr, int fd, uint16_t num_entries);
+void create_child(elf64programheader_s* arr, int fd, uint16_t num_entries, uintptr_t entry_offset);
 void *mmap_prog_section(size_t total_size);
 void *load_segment_to_memory(void *mem, elf64programheader_s phdr, int elf_fd);
 void load_ptload_segements(void* mem, elf64programheader_s *phdr_arr, int fd, uint16_t num_entries);
+void change_mem_protection(void* mem, size_t size, int flag);
 
 #endif
