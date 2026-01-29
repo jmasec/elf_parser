@@ -6,3 +6,6 @@
 
 
 gcc -static -fPIE -pie -nostdlib test.c -o test
+set follow-fork-mode child
+set detach-on-fork off
+break elf_loader.c:27
