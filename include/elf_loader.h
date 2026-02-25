@@ -25,5 +25,6 @@ void *mmap_prog_section(size_t total_size);
 void *load_segment_to_memory(void *mem, elf64programheader_s phdr, int elf_fd, elfsize_s *sizes);
 void load_ptload_segements(void* mem, elf64programheader_s *phdr_arr, int fd, uint16_t num_entries, elfsize_s *sizes);
 void change_mem_protection(void* mem, size_t size, int flag);
+int page_align_up(int addr, int boundry);
 
 #endif

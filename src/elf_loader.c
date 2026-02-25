@@ -22,9 +22,10 @@ void create_child(elf64programheader_s* arr, int fd, uint16_t num_entries, uintp
         // call the entry point here base + entry offset
         void (*entry)(void);
 
-        entry = (char *)mem + (entry_offset - sizes->min_vaddr);
+        entry = (void (*)(void))((char *)mem + (entry_offset - sizes->min_vaddr));
 
-        (*entry)();
+        entry();
+
     }
 }
 
@@ -36,11 +37,13 @@ size_t prog_section_size(elf64programheader_s *phdr_arr, uint16_t num_entries){
     elfsize_s* sizes = (elfsize_s*)malloc(sizeof(elfsize_s));
     //TODO : add when filesz and memsz are not the same to handle bss
     // need to track to zero out that mem and increase total mem size
+    // if p_memsz > p_filesz then .bss exists
+    
     for(int i = 0; i < num_entries; i++ ){
         if(phdr_arr[i].p_type == PT_LOAD){
             if (phdr_arr[i].p_vaddr > max_vaddr){
                 max_vaddr = phdr_arr[i].p_vaddr;
-                max_size = phdr_arr[i].p_filesz;
+                max_size = phdr_arr[i].p_filesz; 
             }
             if(phdr_arr[i].p_vaddr < min_vaddr){
                 min_vaddr = phdr_arr[i].p_vaddr;
@@ -50,9 +53,17 @@ size_t prog_section_size(elf64programheader_s *phdr_arr, uint16_t num_entries){
 
     sizes->max_vaddr = max_vaddr;
     sizes->min_vaddr = min_vaddr;
-    sizes->total_size = max_vaddr + max_size;;
+    sizes->total_size = page_align_up((max_vaddr - min_vaddr) + max_size, 0x1000);
 
     return sizes;
+}
+
+
+int page_align_up(int addr, int boundry){
+    if(addr % boundry != 0){
+        return (addr + boundry - 1) & ~(boundry - 1);
+    }
+    return addr;
 }
 
 void *mmap_prog_section(size_t total_size){
@@ -90,6 +101,6 @@ void change_mem_protection(void* mem, size_t size, int flag){
 void load_ptload_segements(void* mem, elf64programheader_s *phdr_arr, int fd, uint16_t num_entries, elfsize_s *sizes){
     for(int i = 0; i < num_entries; i++ ){
         load_segment_to_memory(mem, phdr_arr[i], fd, sizes);
-        phdr_arr++;
+        //phdr_arr++;
     }
 }
