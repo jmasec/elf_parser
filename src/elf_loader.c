@@ -38,7 +38,7 @@ size_t prog_section_size(elf64programheader_s *phdr_arr, uint16_t num_entries){
     //TODO : add when filesz and memsz are not the same to handle bss
     // need to track to zero out that mem and increase total mem size
     // if p_memsz > p_filesz then .bss exists
-    
+
     for(int i = 0; i < num_entries; i++ ){
         if(phdr_arr[i].p_type == PT_LOAD){
             if (phdr_arr[i].p_vaddr > max_vaddr){
@@ -67,7 +67,7 @@ int page_align_up(int addr, int boundry){
 }
 
 void *mmap_prog_section(size_t total_size){
-    void *base = mmap(NULL, total_size, PROT_READ | PROT_WRITE | PROT_EXEC, 
+    void *base = mmap(NULL, total_size, PROT_READ | PROT_WRITE, 
                   MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 
     return base;
@@ -75,8 +75,11 @@ void *mmap_prog_section(size_t total_size){
 
 void *load_segment_to_memory(void *mem, elf64programheader_s phdr, int elf_fd, elfsize_s *sizes) {
     // size_t mem_size = phdr.p_memsz;
+    // p_filesz = bytes that exist in file
+    // p_memsz = bytes that must exist in mem
+    // p_memsz > p_filesz, difference is bss
     off_t mem_offset = phdr.p_offset;
-    size_t file_size = phdr.p_filesz;
+    size_t bss_size = phdr.p_memsz - phdr.p_filesz;
     uintptr_t vaddr = (void *)(phdr.p_vaddr);
     int prot = 0;
     if (phdr.p_flags & PF_R) prot |= PROT_READ;
@@ -84,18 +87,16 @@ void *load_segment_to_memory(void *mem, elf64programheader_s phdr, int elf_fd, e
     if (phdr.p_flags & PF_X) prot |= PROT_EXEC;
 
     // read from fd and get the PT_LOAD we need
-    size_t bytes_read = pread(elf_fd, (char*)mem + (vaddr - sizes->min_vaddr), file_size, mem_offset);
+    size_t bytes_read = pread(elf_fd, (char*)mem + (vaddr - sizes->min_vaddr), phdr.p_filesz, mem_offset);
+    if (bss_size > 0){
+        memset(((char*)mem + (vaddr - sizes->min_vaddr) + phdr.p_filesz), 0, bss_size);
+    }
 
     if(bytes_read < 0){
         printf("Error while reading file");
     }
 
-    //change_mem_protection(mem,file_size, prot);
-
-}
-
-void change_mem_protection(void* mem, size_t size, int flag){
-    return;
+    mprotect((char*)mem + (vaddr - sizes->min_vaddr), (phdr.p_filesz + bss_size), prot);
 }
 
 void load_ptload_segements(void* mem, elf64programheader_s *phdr_arr, int fd, uint16_t num_entries, elfsize_s *sizes){
