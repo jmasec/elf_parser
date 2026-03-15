@@ -79,23 +79,6 @@ typedef struct {
 	Elf64_Half	e_shstrndx;
 } elf64header_s;
 
-// typedef struct elfheader_s{
-//     unsigned char e_indent[EI_NINDENT]; 
-//     uint16_t e_type; // object file type
-//     uint16_t e_machine; // isa
-//     uint32_t e_version; // 1
-//     uintptr_t e_entry; // mem addr of entry point
-//     size_t e_phoff; // points to start of program header table, usually follows the file header immediatly following this one, offset 0x34 or 0x40 32 or 64 bit
-//     size_t e_shoff;
-//     uint32_t e_flags; // this depends on arch
-//     uint16_t e_ehsize; // contains size of header, normally 64 bytes for 64bit, and 52 bytes for 32bit
-//     uint16_t e_phentsize; // contains size of a program header table entry. 0x20 32bit and 0x38 64bit
-//     uint16_t e_phnum; // contains num of entries in the program header table
-//     uint16_t e_shentsize; // contains the size of a section header table entry. 0x28 32bit, 0x40 64bit
-//     uint16_t e_shnum; // contains the num of entries in section header
-//     uint16_t e_shstrndx; // contains index of the section header table entry that contains section names
-// } elfheader_s;
-
 
 // ptype
 #define PT_NULL     0
@@ -107,17 +90,6 @@ typedef struct {
 #define PF_X 0x1
 #define PF_W 0x2
 #define PF_R 0x4
-
-// typedef struct programheader_s{
-//     uint32_t p_type;
-//     uint32_t p_flags; // flag pos changes for 32 bit, need to add that 
-//     size_t p_offset;
-//     uintptr_t p_vaddr;
-//     uintptr_t p_paddr;
-//     size_t p_filesz;
-//     size_t p_memsz;
-//     size_t p_align;
-// } programheader_s;
 
 typedef struct elf64programheader_s{
     Elf64_Word p_type;
@@ -147,16 +119,16 @@ typedef struct elf64programheader_s{
 #define SHF_STRINGS     5
 
 typedef struct elf64sectionheader_s{
-    uint32_t sh_name;
-    uint32_t sh_type;
-    uint32_t sh_flags;
-    uintptr_t sh_addr;
-    size_t sh_offset;
-    size_t sh_size;
-    uint32_t sh_link;
-    uint32_t sh_info;;
-    size_t sh_addralign;
-    size_t sh_entsize;
+    Elf64_Word sh_name;
+    Elf64_Word sh_type;
+    Elf64_Xword sh_flags;
+    Elf64_Addr sh_addr;
+    Elf64_Off sh_offset;
+    Elf64_Xword sh_size;
+    Elf64_Word sh_link;
+    Elf64_Word sh_info;;
+    Elf64_Xword  sh_addralign;
+    Elf64_Xword  sh_entsize;
 }elf64sectionheader_s;
 
 int open_exe(const char* executable_path);
@@ -167,5 +139,6 @@ bool elf_check_supported(elf64header_s* hdr);
 void display_elf_header(elf64header_s* elf_hdr);
 void display_program_headers(elf64programheader_s* phdr_arr, uint16_t prog_count);
 void display_section_headers(elf64sectionheader_s* shdr_arr, uint16_t num_sections);
+int read_section_headers(int fd, elf64sectionheader_s* secthdr, uint16_t num_entries, size_t section_hdr_offset, uint16_t sh_entsize);
 
 #endif

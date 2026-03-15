@@ -3,7 +3,7 @@
 
 
 int main(){
-    int fd = open_exe("test");
+    int fd = open_exe("test_bss_data");
     if(-1 == fd){
         return -1;
     }
@@ -21,7 +21,7 @@ int main(){
 
     display_elf_header(elf_header);
 
-    uint16_t num_entries = elf_header->e_phnum-1;
+    uint16_t num_entries = elf_header->e_phnum;
 
     uintptr_t entry_offset = elf_header->e_entry;
 
@@ -33,11 +33,19 @@ int main(){
 
     display_program_headers(prog_arr,num_entries);
 
-    // reloc_memsz_s* reloc_data = get_total_memsz(prog_arr, num_entries, fd);
+    uint16_t num_entries_sec = elf_header->e_shnum;
 
-    // void* mmap_mem = mmap_total_mem(reloc_data);
+    elf64sectionheader_s shdr_arr[num_entries_sec];
 
-    create_child(prog_arr, fd, num_entries, entry_offset);
+    if(read_section_headers(fd, shdr_arr, num_entries_sec,  elf_header->e_shoff, elf_header->e_shentsize) != 0){
+        printf("Failed to read in section headers\n");
+    }
+
+    display_section_headers(shdr_arr, num_entries_sec);
+
+    // create_child(prog_arr, fd, num_entries, entry_offset);
+
+    printf("%lu\n", sizeof(elf64sectionheader_s));
 
     free(elf_header);
     close(fd);

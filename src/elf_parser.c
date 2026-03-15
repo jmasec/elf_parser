@@ -121,6 +121,46 @@ int read_program_headers(int fd, elf64programheader_s* phdr_arr, uint16_t num_en
     return 0;
 }
 
+int read_section_headers(int fd, elf64sectionheader_s* shdr_arr, uint16_t num_entries, size_t section_hdr_offset, uint16_t sh_entsize){
+    if(lseek(fd, section_hdr_offset, SEEK_SET) < 0){
+        printf("Failed lseek");
+        return -1;
+    }
+    for(int i = 0; i < num_entries; i++){
+        size_t num_bytes = read(fd, shdr_arr,sh_entsize);
+        if(num_bytes < 0){
+            printf("Count: %li\n", num_bytes);
+            return -1;
+        }
+        shdr_arr++;
+        
+    }
+    if(lseek(fd, 0, SEEK_SET) < 0){
+        printf("Failed lseek");
+        return -1;
+    }
+    return 0;
+}
+
+void display_section_headers(elf64sectionheader_s* shdr_arr, uint16_t sect_num){
+    printf("Section Headers: \n");
+    printf("    %d headers\n", sect_num);
+
+    for(int i = 0; i < sect_num; i++){
+        printf("Section Header %d\n", i);
+        printf("    Type: %x\n", shdr_arr[i].sh_type);
+        printf("    Name: %d\n", shdr_arr[i].sh_name);
+        printf("    Flags: %lx\n", shdr_arr[i].sh_flags);
+        printf("    Address: %lx\n", shdr_arr[i].sh_addr);
+        printf("    Offset: %lx\n", shdr_arr[i].sh_offset);
+        printf("    Section Size: %lx\n", shdr_arr[i].sh_size);
+        printf("    Link: %lx\n", shdr_arr[i].sh_link);
+        printf("    Info: %lx\n", shdr_arr[i].sh_info);
+        printf("    Adress Alignment: %lx\n", shdr_arr[i].sh_addralign);
+        printf("    Entry Table Size: %lx\n", shdr_arr[i].sh_entsize);
+    }
+}
+
 void display_elf_header(elf64header_s* elf_hdr){
     printf("Elf Header:\n");
     printf("    Magic: %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x\n", elf_hdr->e_ident[EI_MAG0], elf_hdr->e_ident[EI_MAG1]
@@ -147,8 +187,4 @@ void display_program_headers(elf64programheader_s* phdr_arr, uint16_t prog_num){
         printf("    Align: %lx\n", phdr_arr[i].p_align);
         printf("\n\n");
     }
-}
-
-void display_section_headers(elf64sectionheader_s* shdr_arr, uint16_t num_sections){
-
 }
