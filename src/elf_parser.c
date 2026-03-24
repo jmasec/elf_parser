@@ -1,84 +1,10 @@
-#include <elf_parser.h>
+#include "elf_parser.h"
 
-/*
-ELF Header:
-  Magic:   7f 45 4c 46 02 01 01 03 00 00 00 00 00 00 00 00
-  Class:                             ELF64
-  Data:                              2's complement, little endian
-  Version:                           1 (current)
-  OS/ABI:                            UNIX - GNU
-  ABI Version:                       0
-  Type:                              EXEC (Executable file)
-  Machine:                           Advanced Micro Devices X86-64
-  Version:                           0x1
-  Entry point address:               0x401740
-  Start of program headers:          64 (bytes into file)
-  Start of section headers:          783448 (bytes into file)
-  Flags:                             0x0
-  Size of this header:               64 (bytes)
-  Size of program headers:           56 (bytes)
-  Number of program headers:         10
-  Size of section headers:           64 (bytes)
-  Number of section headers:         28
-  Section header string table index: 27
+int open_elf_file(const char* elf_path){
+    int fd = open(elf_path, O_RDONLY);
 
-  https://wiki.osdev.org/ELF_Tutorial 
-*/
-
-bool elf_check_file(elf64header_s* hdr){
-    if(!hdr) return false;
-    if(hdr->e_ident[EI_MAG0] != ELFMAG0){
-        printf("ELF Header EI_MAG0 incorrect..\n");
-        return false;
-    }
-    if(hdr->e_ident[EI_MAG1] != ELFMAG1){
-        printf("ELF Header EI_MAG1 incorrect..\n");
-        return false;
-    }
-    if(hdr->e_ident[EI_MAG2] != ELFMAG2){
-        printf("ELF Header EI_MAG2 incorrect..\n");
-        return false;
-    }
-    if(hdr->e_ident[EI_MAG3] != ELFMAG3){
-        printf("ELF Header EI_MAG3 incorrect..\n");
-        return false;
-    } 
-    return true;
-}
-
-bool elf_check_supported(elf64header_s* hdr){
-    if(elf_check_file(hdr) != true){
-        printf("Invalid ELF File.\n");
-        return false;
-    }
-    if(hdr->e_ident[EI_CLASS] != ELFCLASS64){
-        printf("Unsupported ELF File Class.\n");
-        return false;
-    }
-    if(hdr->e_ident[EI_DATA] != ELFDATA2LSB){
-        printf("Unsupported ELF File Byte Order.\n");
-        return false;
-    }
-    if(hdr->e_machine != AMD_x86_64){
-        printf("Unsupported ELF File Target.\n");
-        return false;
-    }
-    if(hdr->e_ident[EI_VERSION] != EV_CURRENT){
-        printf("Unsupported ELF File version.\n");
-        return false;
-    }
-    if(hdr->e_type != ET_REL && hdr->e_type != ET_EXEC) {
-		printf("Unsupported ELF File type.\n");
-		return false;
-	}
-    return true;
-}
-
-int open_exe(const char* executable_path){
-    int fd = open(executable_path, O_RDONLY);
-
-    if(fd == -1){
-        perror("Error opening executable");
+    if(fd < 0){
+        perror("Error opening ELF file");
         return -1;
     }
 
@@ -86,105 +12,140 @@ int open_exe(const char* executable_path){
 }
 
 int read_elf_header(int fd, elf64header_s* elf_hdr){
-    size_t num_bytes = read(fd, elf_hdr, sizeof(elf64header_s));
-    if (num_bytes < 0){
-        printf("Failed read");
-        return -1;
-    }
+    size_t num_bytes = pread(fd, elf_hdr, sizeof(elf64header_s), 0);
 
-    if(lseek(fd, 0, SEEK_SET) < 0){
-        printf("Failed lseek");
+    if (num_bytes < 0 || num_bytes == 0){
+        printf("Nothing was read, ELF read failed");
         return -1;
     }
 
     return 0;
 }
 
-int read_program_headers(int fd, elf64programheader_s* phdr_arr, uint16_t num_entries, size_t prog_hdr_offset, uint16_t phent_size){
-    if(lseek(fd, prog_hdr_offset, SEEK_SET) < 0){
-        printf("Failed lseek");
-        return -1;
-    }
+int read_program_headers(int fd, elf64programheader_s* prog_hdr_arr, uint16_t num_entries, size_t prog_hdr_offset, uint16_t phent_size){
+
     for(int i = 0; i < num_entries; i++){
-        size_t num_bytes = read(fd, phdr_arr,phent_size);
+        size_t num_bytes = pread(fd, prog_hdr_arr, phent_size, prog_hdr_offset);
         if(num_bytes < 0){
-            printf("Count: %i\n", num_bytes);
+            perror("Error reading program headers\n");
             return -1;
         }
-        phdr_arr++;
-        
+        prog_hdr_arr++;
+        prog_hdr_offset += sizeof(elf64programheader_s);
     }
-    if(lseek(fd, 0, SEEK_SET) < 0){
-        printf("Failed lseek");
-        return -1;
-    }
+
     return 0;
 }
 
-int read_section_headers(int fd, elf64sectionheader_s* shdr_arr, uint16_t num_entries, size_t section_hdr_offset, uint16_t sh_entsize){
-    if(lseek(fd, section_hdr_offset, SEEK_SET) < 0){
-        printf("Failed lseek");
-        return -1;
-    }
+int read_section_headers(int fd, elf64sectionheader_s* section_hdr_arr, uint16_t num_entries, size_t section_hdr_offset, uint16_t sh_entsize){
+    
     for(int i = 0; i < num_entries; i++){
-        size_t num_bytes = read(fd, shdr_arr,sh_entsize);
+        size_t num_bytes = pread(fd, section_hdr_arr, sh_entsize, section_hdr_offset);
         if(num_bytes < 0){
-            printf("Count: %li\n", num_bytes);
+            perror("Error reading section headers\n");
             return -1;
         }
-        shdr_arr++;
-        
+        section_hdr_arr++;
+        section_hdr_offset += sizeof(elf64sectionheader_s);
     }
-    if(lseek(fd, 0, SEEK_SET) < 0){
-        printf("Failed lseek");
-        return -1;
-    }
+    
     return 0;
 }
 
-void display_section_headers(elf64sectionheader_s* shdr_arr, uint16_t sect_num){
-    printf("Section Headers: \n");
-    printf("    %d headers\n", sect_num);
+void display_section_headers(elf64sectionheader_s* section_hdr_arr, uint16_t num_entries){
+    printf("Section Headers:  \n");
+    printf("    %d headers\n", num_entries);
 
-    for(int i = 0; i < sect_num; i++){
+    for(int i = 0; i < num_entries; i++){
         printf("Section Header %d\n", i);
-        printf("    Type: %x\n", shdr_arr[i].sh_type);
-        printf("    Name: %d\n", shdr_arr[i].sh_name);
-        printf("    Flags: %lx\n", shdr_arr[i].sh_flags);
-        printf("    Address: %lx\n", shdr_arr[i].sh_addr);
-        printf("    Offset: %lx\n", shdr_arr[i].sh_offset);
-        printf("    Section Size: %lx\n", shdr_arr[i].sh_size);
-        printf("    Link: %lx\n", shdr_arr[i].sh_link);
-        printf("    Info: %lx\n", shdr_arr[i].sh_info);
-        printf("    Adress Alignment: %lx\n", shdr_arr[i].sh_addralign);
-        printf("    Entry Table Size: %lx\n", shdr_arr[i].sh_entsize);
+        printf("    Name: %d\n", section_hdr_arr[i].sh_name);
+        printf("    Type: %x\n", section_hdr_arr[i].sh_type);
+        printf("    Flags: %lx\n", section_hdr_arr[i].sh_flags);
+        printf("    Address: %lx\n", section_hdr_arr[i].sh_addr);
+        printf("    Offset: %lx\n", section_hdr_arr[i].sh_offset);
+        printf("    Section Size: %lx\n", section_hdr_arr[i].sh_size);
+        printf("    Link: %lx\n", section_hdr_arr[i].sh_link);
+        printf("    Info: %lx\n", section_hdr_arr[i].sh_info);
+        printf("    Address Alignment: %lx\n", section_hdr_arr[i].sh_addralign);
+        printf("    Entry Table Size: %lx\n", section_hdr_arr[i].sh_entsize);
+        printf("\n\n");
+    }
+}
+
+void display_program_headers(elf64programheader_s* prog_hdr_arr, uint16_t num_entries){
+    printf("Program Headers:  \n");
+    printf("    %d headers\n", num_entries);
+
+    for(int i = 0; i < num_entries; i++){
+        printf("Program Header %d\n", i);
+        printf("    Type: %x\n", prog_hdr_arr[i].p_type);
+        printf("    Flags: %x\n", prog_hdr_arr[i].p_flags);
+        printf("    Offset: %x\n", prog_hdr_arr[i].p_offset);
+        printf("    Virtual Address: %x\n", prog_hdr_arr[i].p_vaddr);
+        printf("    Physical Address: %x\n", prog_hdr_arr[i].p_paddr);
+        printf("    File Size: %x\n", prog_hdr_arr[i].p_filesz);
+        printf("    Mem Size: %x\n", prog_hdr_arr[i].p_memsz);
+        printf("    Align: %x\n", prog_hdr_arr[i].p_align);
+        printf("\n\n");
     }
 }
 
 void display_elf_header(elf64header_s* elf_hdr){
-    printf("Elf Header:\n");
+    printf("ELF Header:\n");
     printf("    Magic: %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x\n", elf_hdr->e_ident[EI_MAG0], elf_hdr->e_ident[EI_MAG1]
     , elf_hdr->e_ident[EI_MAG2], elf_hdr->e_ident[EI_MAG3], elf_hdr->e_ident[EI_CLASS], elf_hdr->e_ident[EI_DATA]
     , elf_hdr->e_ident[EI_VERSION], elf_hdr->e_ident[EI_OSABI], elf_hdr->e_ident[EI_ABIVERSION], elf_hdr->e_ident[EI_PAD]
     , elf_hdr->e_ident[10], elf_hdr->e_ident[11], elf_hdr->e_ident[12], elf_hdr->e_ident[13]
-    , elf_hdr->e_ident[13], elf_hdr->e_ident[14], elf_hdr->e_ident[15], elf_hdr->e_ident[16]);
-    printf("entry: %x\n", elf_hdr->e_entry);
+    , elf_hdr->e_ident[14], elf_hdr->e_ident[15] );
+
+    printf("Entry: %lx\n", elf_hdr->e_entry);
+    printf("Type: %x\n", elf_hdr->e_type);
 }
 
-void display_program_headers(elf64programheader_s* phdr_arr, uint16_t prog_num){
-    printf("Program Headers: \n");
-    printf("    %d headers\n", prog_num);
-
-    for(int i = 0; i < prog_num; i++){
-        printf("Program Header %d\n", i);
-        printf("    Type: %x\n", phdr_arr[i].p_type);
-        printf("    Offset: %lx\n", phdr_arr[i].p_offset);
-        printf("    Virtual Addr: %lx\n", phdr_arr[i].p_vaddr);
-        printf("    Physical Addr: %lx\n", phdr_arr[i].p_paddr);
-        printf("    File Size: %lx\n", phdr_arr[i].p_filesz);
-        printf("    Mem Size: %lx\n", phdr_arr[i].p_memsz);
-        printf("    Flags: %x\n", phdr_arr[i].p_flags);
-        printf("    Align: %lx\n", phdr_arr[i].p_align);
-        printf("\n\n");
+bool elf_check_valid_file(elf64header_s* elf_hdr){
+    if(elf_hdr->e_ident[EI_MAG0] != ELFMAG0){
+        return false;
     }
+    if(elf_hdr->e_ident[EI_MAG1] != ELFMAG1){
+        printf("ELF header EI_MAG1 incorrect...\n");
+        return false;
+    }
+    if(elf_hdr->e_ident[EI_MAG2] != ELFMAG2){
+        printf("ELF header EI_MAG2 incorrect...\n");
+        return false;
+    }
+    if(elf_hdr->e_ident[EI_MAG3] != ELFMAG3){
+        printf("ELF header EI_MAG3 incorrect...\n");
+        return false;
+    }
+    return true;
+
+}
+
+bool elf_check_support(elf64header_s* elf_hdr){
+    if(elf_check_valid_file(elf_hdr) != true){
+        printf("Invalid ELF file\n");
+        return false;
+    }
+    if(elf_hdr->e_ident[EI_CLASS] != ELFCLASS64){
+        printf("Unsupported ELF file class.\n");
+        return false;
+    }
+    if(elf_hdr->e_ident[EI_DATA] != ELFDATA2LSB){
+        printf("Unsupported ELF file byte order.\n");
+        return false;
+    }
+    if(elf_hdr->e_machine != AMD_x86_64){
+        printf("Unsupported ELF file target.\n");
+        return false;
+    }
+    if(elf_hdr->e_ident[EI_VERSION] != EV_CURRENT){
+        printf("Unsupported ELF file version.\n");
+        return false;
+    }
+    if(elf_hdr->e_type != ET_REL && elf_hdr->e_type != ET_EXEC){
+        printf("Unsupported ELF file type.\n");
+        return false;
+    }
+    return true;
 }

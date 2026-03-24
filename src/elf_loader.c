@@ -2,8 +2,82 @@
 #include <string.h>
 
 
-void create_child(elf64programheader_s* arr, int fd, uint16_t num_entries, uintptr_t entry_offset){
-    pid_t child_pid;
+elfsize_s* program_section_sizes(elf64programheader_s* prog_hdr_arr, uint16_t num_entries){
+    elfsize_s* binary_sizes = (elfsize_s*)malloc(sizeof(elfsize_s));
+    size_t total_size = 0;
+    size_t max_size = 0;
+    Elf64_Addr max_vaddr = 0;
+    Elf64_Addr min_vaddr = prog_hdr_arr[0].p_vaddr;
+
+    for(int i = 0; i < num_entries; i++){
+        if(prog_hdr_arr[i].p_type == PT_LOAD){
+            if(prog_hdr_arr[i].p_vaddr > max_vaddr){
+                max_vaddr = prog_hdr_arr[i].p_vaddr;
+                max_size = prog_hdr_arr[i].p_filesz;
+            }
+            if(prog_hdr_arr[i].p_vaddr < min_vaddr){
+                min_vaddr = prog_hdr_arr[i].p_vaddr;
+            }
+        }
+    }
+
+    binary_sizes->max_vaddr = max_vaddr;
+    binary_sizes->min_vaddr = min_vaddr;
+    binary_sizes->total_size = page_align_up((max_vaddr - min_vaddr) + max_size, 0x1000);
+
+    return binary_sizes;
+}
+
+
+int page_align_up(int addr, int boundary){
+    if(addr % boundary != 0){
+        return (addr + boundary - 1) &  ~(boundary - 1);
+    }
+    return addr;
+}
+
+void* mmap_target_process(size_t total_size){
+    void* base_mem_region = mmap(NULL, total_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    return base_mem_region;
+}
+
+
+void load_segment_to_memory(int fd, void* base_mem, elf64programheader_s prog_hdr, elfsize_s* binary_sizes){
+    off_t mem_offset = prog_hdr.p_offset;
+    size_t bss_size = prog_hdr.p_memsz - prog_hdr.p_filesz;
+    uintptr_t vaddr = (void *)(prog_hdr.p_vaddr);
+
+    int prot = 0;
+    if(prog_hdr.p_flags & PF_R) prot |= PROT_READ;
+    if(prog_hdr.p_flags & PF_W) prot |= PROT_WRITE;
+    if(prog_hdr.p_flags & PF_X) prot |= PROT_EXEC;
+
+    size_t bytes_read = pread(fd, (char *)base_mem + (vaddr - binary_sizes->min_vaddr), prog_hdr.p_filesz, mem_offset);
+
+    if(bss_size > 0){
+        memset(((char *)base_mem + (vaddr - binary_sizes->min_vaddr) + prog_hdr.p_filesz), 0, bss_size);
+    }
+
+    if(bytes_read < 0){
+        printf("Error while loading PT_LOAD segment");
+    }
+
+    mprotect((char *)base_mem + (vaddr - binary_sizes->min_vaddr), (prog_hdr.p_filesz + bss_size), prot);
+}
+
+
+void load_ptload_segments(int fd, void* base_mem, elf64programheader_s* prog_hdr_arr, uint16_t num_entries, elfsize_s* binary_sizes){
+    for(int i = 0; i < num_entries; i++){
+        if(prog_hdr_arr[i].p_type == PT_LOAD){
+            load_segment_to_memory(fd, base_mem, prog_hdr_arr[i], binary_sizes);
+        }
+    }
+}
+
+
+
+void inject_target_process(int fd, elf64programheader_s* prog_hdr_arr, uint16_t num_entries, uintptr_t entry_offset){
+    pid_t child_pid; 
 
     child_pid = fork();
 
@@ -12,96 +86,21 @@ void create_child(elf64programheader_s* arr, int fd, uint16_t num_entries, uintp
         exit(1);
     }
     else if (child_pid == 0){
-        elfsize_s* sizes = prog_section_size(arr, num_entries);
-        printf("TOTAL: %ld\n", sizes->total_size);
+        elfsize_s* binary_sizes = program_section_sizes(prog_hdr_arr, num_entries);
+        printf("Total size: %ld\n", binary_sizes->total_size);
 
-        void* mem = mmap_prog_section(sizes->total_size);
+        void* mmap_mem = mmap_target_process(binary_sizes->total_size);
 
-        load_ptload_segements(mem, arr, fd, num_entries, sizes);
+        load_ptload_segments(fd, mmap_mem, prog_hdr_arr, num_entries, binary_sizes);
 
-        // call the entry point here base + entry offset
         void (*entry)(void);
 
-        entry = (void (*)(void))((char *)mem + (entry_offset - sizes->min_vaddr));
+        entry = (void(*)(void))((char *)mmap_mem + (entry_offset - binary_sizes->min_vaddr));
+
+        free(binary_sizes);
 
         entry();
-
     }
 }
 
-size_t prog_section_size(elf64programheader_s *phdr_arr, uint16_t num_entries){
-    size_t total_size = 0;
-    Elf64_Addr max_vaddr = 0;
-    Elf64_Addr min_vaddr = phdr_arr[0].p_vaddr;
-    size_t max_size = 0;
-    elfsize_s* sizes = (elfsize_s*)malloc(sizeof(elfsize_s));
-    //TODO : add when filesz and memsz are not the same to handle bss
-    // need to track to zero out that mem and increase total mem size
-    // if p_memsz > p_filesz then .bss exists
 
-    for(int i = 0; i < num_entries; i++ ){
-        if(phdr_arr[i].p_type == PT_LOAD){
-            if (phdr_arr[i].p_vaddr > max_vaddr){
-                max_vaddr = phdr_arr[i].p_vaddr;
-                max_size = phdr_arr[i].p_filesz; 
-            }
-            if(phdr_arr[i].p_vaddr < min_vaddr){
-                min_vaddr = phdr_arr[i].p_vaddr;
-            }
-        }
-    }
-
-    sizes->max_vaddr = max_vaddr;
-    sizes->min_vaddr = min_vaddr;
-    sizes->total_size = page_align_up((max_vaddr - min_vaddr) + max_size, 0x1000);
-
-    return sizes;
-}
-
-
-int page_align_up(int addr, int boundry){
-    if(addr % boundry != 0){
-        return (addr + boundry - 1) & ~(boundry - 1);
-    }
-    return addr;
-}
-
-void *mmap_prog_section(size_t total_size){
-    void *base = mmap(NULL, total_size, PROT_READ | PROT_WRITE, 
-                  MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-
-    return base;
-}
-
-void *load_segment_to_memory(void *mem, elf64programheader_s phdr, int elf_fd, elfsize_s *sizes) {
-    // size_t mem_size = phdr.p_memsz;
-    // p_filesz = bytes that exist in file
-    // p_memsz = bytes that must exist in mem
-    // p_memsz > p_filesz, difference is bss
-    off_t mem_offset = phdr.p_offset;
-    size_t bss_size = phdr.p_memsz - phdr.p_filesz;
-    uintptr_t vaddr = (void *)(phdr.p_vaddr);
-    int prot = 0;
-    if (phdr.p_flags & PF_R) prot |= PROT_READ;
-    if (phdr.p_flags & PF_W) prot |= PROT_WRITE;
-    if (phdr.p_flags & PF_X) prot |= PROT_EXEC;
-
-    // read from fd and get the PT_LOAD we need
-    size_t bytes_read = pread(elf_fd, (char*)mem + (vaddr - sizes->min_vaddr), phdr.p_filesz, mem_offset);
-    if (bss_size > 0){
-        memset(((char*)mem + (vaddr - sizes->min_vaddr) + phdr.p_filesz), 0, bss_size);
-    }
-
-    if(bytes_read < 0){
-        printf("Error while reading file");
-    }
-
-    mprotect((char*)mem + (vaddr - sizes->min_vaddr), (phdr.p_filesz + bss_size), prot);
-}
-
-void load_ptload_segements(void* mem, elf64programheader_s *phdr_arr, int fd, uint16_t num_entries, elfsize_s *sizes){
-    for(int i = 0; i < num_entries; i++ ){
-        load_segment_to_memory(mem, phdr_arr[i], fd, sizes);
-        //phdr_arr++;
-    }
-}

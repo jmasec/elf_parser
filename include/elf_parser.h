@@ -10,6 +10,31 @@
 #include <sys/mman.h>
 #include <stdbool.h>
 
+/*
+ELF Header:
+  Magic:   7f 45 4c 46 02 01 01 03 00 00 00 00 00 00 00 00
+  Class:                             ELF64
+  Data:                              2's complement, little endian
+  Version:                           1 (current)
+  OS/ABI:                            UNIX - GNU
+  ABI Version:                       0
+  Type:                              EXEC (Executable file)
+  Machine:                           Advanced Micro Devices X86-64
+  Version:                           0x1
+  Entry point address:               0x401740
+  Start of program headers:          64 (bytes into file)
+  Start of section headers:          783448 (bytes into file)
+  Flags:                             0x0
+  Size of this header:               64 (bytes)
+  Size of program headers:           56 (bytes)
+  Number of program headers:         10
+  Size of section headers:           64 (bytes)
+  Number of section headers:         28
+  Section header string table index: 27
+
+  https://wiki.osdev.org/ELF_Tutorial 
+*/
+
 
 // OS ABI
 #define LINUX 0x03
@@ -103,8 +128,6 @@ typedef struct elf64programheader_s{
 } elf64programheader_s;
 
 
-// may not need the section header here
-
 // sh_type
 #define SHT_NULL        0
 #define SHT_PROGBITS    1
@@ -126,19 +149,19 @@ typedef struct elf64sectionheader_s{
     Elf64_Off sh_offset;
     Elf64_Xword sh_size;
     Elf64_Word sh_link;
-    Elf64_Word sh_info;;
+    Elf64_Word sh_info;
     Elf64_Xword  sh_addralign;
     Elf64_Xword  sh_entsize;
 }elf64sectionheader_s;
 
-int open_exe(const char* executable_path);
-int read_elf_header(int fd, elf64header_s* elf_header);
-int read_program_headers(int fd, elf64programheader_s* phdr_arr, uint16_t num_entries, size_t prog_hdr_offset, uint16_t phent_size);
-bool elf_check_file(elf64header_s* hdr);
-bool elf_check_supported(elf64header_s* hdr);
+int open_elf_file(const char* elf_path);
+int read_elf_header(int fd, elf64header_s* elf_hdr);
+bool elf_check_valid_file(elf64header_s* elf_hdr);
+bool elf_check_support(elf64header_s* elf_hdr);
 void display_elf_header(elf64header_s* elf_hdr);
-void display_program_headers(elf64programheader_s* phdr_arr, uint16_t prog_count);
-void display_section_headers(elf64sectionheader_s* shdr_arr, uint16_t num_sections);
-int read_section_headers(int fd, elf64sectionheader_s* secthdr, uint16_t num_entries, size_t section_hdr_offset, uint16_t sh_entsize);
+int read_section_headers(int fd, elf64sectionheader_s* section_hdr_arr, uint16_t num_entries, size_t section_hdr_offset, uint16_t sh_entsize);
+int read_program_headers(int fd, elf64programheader_s* prog_hdr_arr, uint16_t num_entries, size_t prog_hdr_offset, uint16_t phent_size);
+void display_program_headers(elf64programheader_s* prog_hdr_arr, uint16_t num_entries);
+void display_section_headers(elf64sectionheader_s* section_hdr_arr, uint16_t num_entries);
 
 #endif

@@ -1,53 +1,55 @@
 #include "elf_parser.h"
 #include "elf_loader.h"
 
-
 int main(){
-    int fd = open_exe("test_bss_data");
-    if(-1 == fd){
+    int fd = open_elf_file("test_bss_data");
+    if(fd < 0){
+        return -1;
+    }
+    printf("Opened ELF\n");
+
+    elf64header_s* elf_hdr = calloc(1, sizeof(elf64header_s));
+
+    if(read_elf_header(fd, elf_hdr) != 0){
+        perror("Failed to read in ELF header\n");
         return -1;
     }
 
-    elf64header_s* elf_header = calloc(1, sizeof(elf64header_s));
+    printf("Read ELF Header\n");
 
-    if(read_elf_header(fd, elf_header) != 0){
-        printf("Failed to read in elf header\n");
+    if(elf_check_support(elf_hdr) != true){
         return -1;
     }
 
-    if(elf_check_supported(elf_header) != true){
+    printf("ELF is Supported\n");
+
+    display_elf_header(elf_hdr);
+
+    uint16_t num_prog_entries = elf_hdr->e_phnum;
+
+    elf64programheader_s prog_hdr_arr[num_prog_entries];
+
+    if(read_program_headers(fd, prog_hdr_arr, num_prog_entries, elf_hdr->e_phoff, elf_hdr->e_phentsize) < 0){
+        printf("Failed to read in program headers\n");
         return -1;
     }
 
-    display_elf_header(elf_header);
+    display_program_headers(prog_hdr_arr, num_prog_entries);
 
-    uint16_t num_entries = elf_header->e_phnum;
+    size_t num_section_entries = elf_hdr->e_shnum;
 
-    uintptr_t entry_offset = elf_header->e_entry;
+    elf64sectionheader_s section_hdr_arr[num_section_entries];
 
-    elf64programheader_s prog_arr[num_entries];
-    
-    if(read_program_headers(fd, prog_arr, num_entries, elf_header->e_phoff, elf_header->e_phentsize) != 0){
-        printf("Failed to read in program header\n");
-    }
-
-    display_program_headers(prog_arr,num_entries);
-
-    uint16_t num_entries_sec = elf_header->e_shnum;
-
-    elf64sectionheader_s shdr_arr[num_entries_sec];
-
-    if(read_section_headers(fd, shdr_arr, num_entries_sec,  elf_header->e_shoff, elf_header->e_shentsize) != 0){
+    if(read_section_headers(fd, section_hdr_arr, num_section_entries, elf_hdr->e_shoff, elf_hdr->e_shentsize) < 0){
         printf("Failed to read in section headers\n");
+        return -1;
     }
 
-    display_section_headers(shdr_arr, num_entries_sec);
+    display_section_headers(section_hdr_arr, num_section_entries);
 
-    // create_child(prog_arr, fd, num_entries, entry_offset);
+    inject_target_process(fd, prog_hdr_arr, num_prog_entries, elf_hdr->e_entry);
 
-    printf("%lu\n", sizeof(elf64sectionheader_s));
-
-    free(elf_header);
+    free(elf_hdr);
     close(fd);
 
     return 0;

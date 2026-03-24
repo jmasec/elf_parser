@@ -34,7 +34,7 @@ static inline void sys_exit(int code) {
     __builtin_unreachable();
 }
 
-void _start(void) {
+void _start(void) {    
     // touch .bss
     accumulator = 0;
 
