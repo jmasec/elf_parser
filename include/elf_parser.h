@@ -43,20 +43,20 @@ ELF Header:
 #define NoISA       0x00
 #define x86         0x03
 #define MIPS        0x08
-#define ARM         0x28
+#define AARCH32         0x28
 #define AMD_x86_64  0x3E
-#define ARM_64      0xB7
+#define AARCH64      0xB7
 #define RISC_V      0xF3
 
-// elf values
+// NIDENT Values in ELF Header
 #define ELFMAG0             0x7f
 #define ELFMAG1             'E'
 #define ELFMAG2             'L'
 #define ELFMAG3             'F'
 #define ELFCLASS64          2
 #define ELFDATA2LSB         1
-#define ELFOSABI            3
 #define EV_CURRENT          1
+
 
 #define EI_NINDENT 16
 
@@ -156,12 +156,12 @@ typedef struct elf64sectionheader_s{
 
 int open_elf_file(const char* elf_path);
 int read_elf_header(int fd, elf64header_s* elf_hdr);
-bool elf_check_valid_file(elf64header_s* elf_hdr);
-bool elf_check_support(elf64header_s* elf_hdr);
 void display_elf_header(elf64header_s* elf_hdr);
 int read_section_headers(int fd, elf64sectionheader_s* section_hdr_arr, uint16_t num_entries, size_t section_hdr_offset, uint16_t sh_entsize);
 int read_program_headers(int fd, elf64programheader_s* prog_hdr_arr, uint16_t num_entries, size_t prog_hdr_offset, uint16_t phent_size);
 void display_program_headers(elf64programheader_s* prog_hdr_arr, uint16_t num_entries);
 void display_section_headers(elf64sectionheader_s* section_hdr_arr, uint16_t num_entries);
+const char * elf_type_string(uint16_t type);
+const char * elf_machine_string(uint16_t type);
 
 #endif

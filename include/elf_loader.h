@@ -17,5 +17,7 @@ void load_ptload_segments(int fd, void* base_mem, elf64programheader_s* prog_hdr
 void load_segment_to_memory(int fd, void* base_mem, elf64programheader_s prog_hdr, elfsize_s* binary_sizes);
 int page_align_up(int addr, int boundary);
 void* mmap_target_process(size_t total_size);
+bool elf_check_valid_file(elf64header_s* elf_hdr);
+bool elf_check_support(elf64header_s* elf_hdr);
 
 #endif

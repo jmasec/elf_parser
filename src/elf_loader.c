@@ -103,4 +103,52 @@ void inject_target_process(int fd, elf64programheader_s* prog_hdr_arr, uint16_t 
     }
 }
 
+bool elf_check_valid_file(elf64header_s* elf_hdr){
+    if(elf_hdr->e_ident[EI_MAG0] != ELFMAG0){
+        return false;
+    }
+    if(elf_hdr->e_ident[EI_MAG1] != ELFMAG1){
+        printf("ELF header EI_MAG1 incorrect...\n");
+        return false;
+    }
+    if(elf_hdr->e_ident[EI_MAG2] != ELFMAG2){
+        printf("ELF header EI_MAG2 incorrect...\n");
+        return false;
+    }
+    if(elf_hdr->e_ident[EI_MAG3] != ELFMAG3){
+        printf("ELF header EI_MAG3 incorrect...\n");
+        return false;
+    }
+    return true;
+
+}
+
+bool elf_check_support(elf64header_s* elf_hdr){
+    if(elf_check_valid_file(elf_hdr) != true){
+        printf("Invalid ELF file\n");
+        return false;
+    }
+    if(elf_hdr->e_ident[EI_CLASS] != ELFCLASS64){
+        printf("Unsupported ELF file class.\n");
+        return false;
+    }
+    if(elf_hdr->e_ident[EI_DATA] != ELFDATA2LSB){
+        printf("Unsupported ELF file byte order.\n");
+        return false;
+    }
+    if(elf_hdr->e_machine != AMD_x86_64){
+        printf("Unsupported ELF file target.\n");
+        return false;
+    }
+    if(elf_hdr->e_ident[EI_VERSION] != EV_CURRENT){
+        printf("Unsupported ELF file version.\n");
+        return false;
+    }
+    if(elf_hdr->e_type != ET_REL && elf_hdr->e_type != ET_EXEC){
+        printf("Unsupported ELF file type.\n");
+        return false;
+    }
+    return true;
+}
+
 
