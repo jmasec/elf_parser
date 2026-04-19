@@ -1,5 +1,6 @@
 #include "elf_parser.h"
-#include "elf_loader.h"
+#include "elf_display.h"
+
 
 int main(){
     int fd = open_elf_file("test_bss_data");
@@ -17,11 +18,6 @@ int main(){
 
     printf("Read ELF Header\n");
 
-    if(elf_check_support(elf_hdr) != true){
-        return -1;
-    }
-
-    printf("ELF is Supported\n");
 
     display_elf_header(elf_hdr);
 
@@ -47,7 +43,6 @@ int main(){
 
     display_section_headers(section_hdr_arr, num_section_entries);
 
-    inject_target_process(fd, prog_hdr_arr, num_prog_entries, elf_hdr->e_entry);
 
     free(elf_hdr);
     close(fd);

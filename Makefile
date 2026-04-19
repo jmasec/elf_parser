@@ -6,7 +6,7 @@ TARGET = main
 EXECUTABLE = $(BIN_DIR)/$(TARGET)
 
 # List all source files
-C_FILES = src/main.c src/elf_parser.c src/elf_loader.c
+C_FILES = src/main.c src/elf_parser.c src/elf_display.c
 
 # Automatically generate object file names from source files
 O_FILES = $(addprefix $(BIN_DIR)/, $(notdir $(C_FILES:.c=.o)))
