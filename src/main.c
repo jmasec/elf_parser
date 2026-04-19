@@ -77,7 +77,7 @@ int main(int argc, char *argv[]){
         display_program_headers(prog_hdr_arr, num_prog_entries);
         break;
     }
-    case SEGMENT: {
+    case SECTION: {
          size_t num_section_entries = elf_hdr->e_shnum;
 
         elf64sectionheader_s section_hdr_arr[num_section_entries];

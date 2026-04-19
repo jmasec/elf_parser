@@ -7,15 +7,21 @@ void display_section_headers(elf64sectionheader_s* section_hdr_arr, uint16_t num
 
     for(int i = 0; i < num_entries; i++){
         printf("Section Header %d\n", i);
-        printf("    Name: %d\n", section_hdr_arr[i].sh_name);
-        printf("    Type: %x\n", section_hdr_arr[i].sh_type);
+        printf("    Name (Index): %d\n", section_hdr_arr[i].sh_name);
+        char* type = section_type_string(section_hdr_arr[i].sh_type);
+        printf("    Type: %s\n", type);
         printf("    Flags: %lx\n", section_hdr_arr[i].sh_flags);
-        printf("    Address: %lx\n", section_hdr_arr[i].sh_addr);
-        printf("    Offset: %lx\n", section_hdr_arr[i].sh_offset);
-        printf("    Section Size: %lx\n", section_hdr_arr[i].sh_size);
+        printf("    Address: 0x%lx\n", section_hdr_arr[i].sh_addr);
+        printf("    Offset: 0x%lx\n", section_hdr_arr[i].sh_offset);
+        printf("    Section Size: %d (bytes)\n", section_hdr_arr[i].sh_size);
         printf("    Link: %lx\n", section_hdr_arr[i].sh_link);
         printf("    Info: %lx\n", section_hdr_arr[i].sh_info);
-        printf("    Address Alignment: %lx\n", section_hdr_arr[i].sh_addralign);
+        if(section_hdr_arr[i].sh_addralign == 1 || section_hdr_arr[i].sh_addralign == 0){
+            printf("    Address Alignment: No Alignment Constraints\n");
+        }
+        else{
+            printf("    Address Alignment: %lx\n", section_hdr_arr[i].sh_addralign);
+        }
         printf("    Entry Table Size: %lx\n", section_hdr_arr[i].sh_entsize);
         printf("\n\n");
     }
@@ -95,6 +101,38 @@ const char * elf_machine_string(uint16_t type){
     }
 }
 
+const char * section_type_string(uint16_t type){
+    switch (type)
+    {
+    case SHT_NULL:
+        return "Inactive (null)";
+    case SHT_PROGBITS:
+        return "PROGBITS (Info defined by program)"; 
+    case SHT_SYMTAB:
+        return "SYMTAB (Symbol Table)";
+    case SHT_STRTAB:
+        return "STRTAB (String Table)";
+    case SHT_RELA:
+        return "RELA (Relocation Entries with explicit addends)";
+    case SHT_HASH:
+        return "HASH (Symbol Hash Table)";
+    case SHT_DYNAMIC:
+        return "DYNAMIC (Dynamic Linking Information)";
+    case SHT_NOTE:
+        return "NOTE";
+    case SHT_NOBITS:
+        return "NOBITS";
+    case SHT_REL:
+        return "REL (Relocation entries with no explicit addends)";
+    case SHT_SHLIB:
+        return "RESERVED";
+    case SHT_DYNSYM:
+        return "DYNSYM (Symbol Table)";
+    default:
+        break;
+    }
+}
+
 enum Command get_command(char * input_cmd){
     if(!strncmp(input_cmd, "-a", 2)){
         enum Command cmd = ALL;
@@ -105,7 +143,7 @@ enum Command get_command(char * input_cmd){
         return cmd;
     }
     else if(!strncmp(input_cmd, "-s", 2)){
-        enum Command cmd = SEGMENT;
+        enum Command cmd = SECTION;
         return cmd;
     }
     else{
