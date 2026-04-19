@@ -94,3 +94,21 @@ const char * elf_machine_string(uint16_t type){
         break;
     }
 }
+
+enum Command get_command(char * input_cmd){
+    if(!strncmp(input_cmd, "-a", 2)){
+        enum Command cmd = ALL;
+        return cmd;
+    }
+    else if(!strncmp(input_cmd, "-p", 2)){
+        enum Command cmd = PROGRAM;
+        return cmd;
+    }
+    else if(!strncmp(input_cmd, "-s", 2)){
+        enum Command cmd = SEGMENT;
+        return cmd;
+    }
+    else{
+        return -1;
+    }
+}
