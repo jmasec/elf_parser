@@ -58,6 +58,21 @@ ELF Header:
 
 #define EI_NINDENT 16
 
+enum section_types{
+    SHT_NULL,
+    SHT_PROGBITS,
+    SHT_SYMTAB,
+    SHT_STRTAB,
+    SHT_RELA,
+    SHT_HASH,
+    SHT_DYNAMIC,
+    SHT_NOTE,
+    SHT_NOBITS,
+    SHT_REL,
+    SHT_SHLIB,
+    SHT_DYNSYM
+}; 
+
 enum elf_types{
     ET_NONE,
     ET_REL,
@@ -153,13 +168,6 @@ typedef struct elf64programheader_s{
     Elf64_Xword p_memsz;
     Elf64_Xword p_align;
 } elf64programheader_s;
-
-
-// sh_type
-#define SHT_NULL        0
-#define SHT_PROGBITS    1
-#define SHT_SYMTAB      2
-#define SHT_STRTAB      3
 
 // sh_flags
 #define SHF_WRITE       1

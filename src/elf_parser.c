@@ -1,23 +1,18 @@
 #include "elf_parser.h"
 
 int open_elf_file(const char* elf_path){
-    if(ELF_FILE_DESCRIPTOR){
-        int fd = open(elf_path, O_RDONLY);
+    int fd = open(elf_path, O_RDONLY);
 
-        if(fd < 0){
-            perror("Error opening ELF file");
-            return -1;
-        }
-
-        return fd;
-    }
-    else{
+    if(fd < 0){
+        perror("Error opening ELF file");
         return -1;
     }
+
+    return fd;
 }
 
 bool read_elf_header(int fd, elf64header_s* elf_hdr){
-    size_t num_bytes = pread(fd, elf_hdr, sizeof(elf64header_s), 0);
+    ssize_t num_bytes = pread(fd, elf_hdr, sizeof(elf64header_s), 0);
 
     if (num_bytes < 0 || num_bytes == 0){
         printf("Nothing was read, ELF read failed");
@@ -30,7 +25,7 @@ bool read_elf_header(int fd, elf64header_s* elf_hdr){
 bool read_program_headers(int fd, elf64programheader_s* prog_hdr_arr, uint16_t num_entries, size_t prog_hdr_offset, uint16_t phent_size){
 
     for(int i = 0; i < num_entries; i++){
-        size_t num_bytes = pread(fd, prog_hdr_arr[i], phent_size, prog_hdr_offset);
+        ssize_t num_bytes = pread(fd, &prog_hdr_arr[i], phent_size, prog_hdr_offset);
         if(num_bytes < 0){
             perror("Error reading program headers\n");
             return false;
@@ -44,7 +39,7 @@ bool read_program_headers(int fd, elf64programheader_s* prog_hdr_arr, uint16_t n
 bool read_section_headers(int fd, elf64sectionheader_s* section_hdr_arr, uint16_t num_entries, size_t section_hdr_offset, uint16_t sh_entsize){
     
     for(int i = 0; i < num_entries; i++){
-        size_t num_bytes = pread(fd, section_hdr_arr[i], sh_entsize, section_hdr_offset);
+        ssize_t num_bytes = pread(fd, &section_hdr_arr[i], sh_entsize, section_hdr_offset);
         if(num_bytes < 0){
             perror("Error reading section headers\n");
             return false;

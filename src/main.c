@@ -6,7 +6,7 @@ int main(int argc, char *argv[]){
 
     if(argc < 3){
         printf("Missing Arguments\n");\
-        printf("-[ARG] [EXECUTABLE PATH]\n");
+        help();
         return 0;
     }
 
@@ -14,7 +14,7 @@ int main(int argc, char *argv[]){
 
     if(cmd = get_command(argv[1]) == -1){
         printf("Bad Argument \n");
-        printf("Supported Args: -a , -p, -s\n");
+        help();
         return -1;
     }
 
@@ -27,7 +27,7 @@ int main(int argc, char *argv[]){
 
     elf64header_s* elf_hdr = calloc(1, sizeof(elf64header_s));
 
-    if(read_elf_header(fd, elf_hdr) != 0){
+    if(!read_elf_header(fd, elf_hdr)){
         perror("Failed to read in ELF header\n");
         return -1;
     }
@@ -88,6 +88,11 @@ int main(int argc, char *argv[]){
         }
 
         display_section_headers(section_hdr_arr, num_section_entries);
+        break;
+    }
+    case HELP: {
+        help();
+        break;
     }
     default:
         break;
