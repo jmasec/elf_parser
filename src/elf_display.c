@@ -1,4 +1,3 @@
-#include "elf.h"
 #include "elf_display.h"
 
 void display_section_headers(elf64sectionheader_s* section_hdr_arr, uint16_t num_entries){
@@ -8,9 +7,12 @@ void display_section_headers(elf64sectionheader_s* section_hdr_arr, uint16_t num
     for(int i = 0; i < num_entries; i++){
         printf("Section Header %d\n", i);
         printf("    Name (Index): %d\n", section_hdr_arr[i].sh_name);
-        char* type = section_type_string(section_hdr_arr[i].sh_type);
+        const char* type = section_type_string(section_hdr_arr[i].sh_type);
         printf("    Type: %s\n", type);
-        printf("    Flags: %lx\n", section_hdr_arr[i].sh_flags);
+        // printf("    Type: %x\n", section_hdr_arr[i].sh_type);
+        // const char* flags = section_flag_string(section_hdr_arr[i].sh_flags);
+        // printf("    Flags: %s\n", flags);
+        printf("    Flags: %x\n", section_hdr_arr[i].sh_flags);
         printf("    Address: 0x%lx\n", section_hdr_arr[i].sh_addr);
         printf("    Offset: 0x%lx\n", section_hdr_arr[i].sh_offset);
         printf("    Section Size: %d (bytes)\n", section_hdr_arr[i].sh_size);
@@ -24,6 +26,7 @@ void display_section_headers(elf64sectionheader_s* section_hdr_arr, uint16_t num
         }
         printf("    Entry Table Size: %lx\n", section_hdr_arr[i].sh_entsize);
         printf("\n\n");
+
     }
 }
 
@@ -36,8 +39,8 @@ void display_program_headers(elf64programheader_s* prog_hdr_arr, uint16_t num_en
         printf("    Type: %x\n", prog_hdr_arr[i].p_type);
         printf("    Flags: %x\n", prog_hdr_arr[i].p_flags);
         printf("    Offset: %x\n", prog_hdr_arr[i].p_offset);
-        printf("    Virtual Address: %x\n", prog_hdr_arr[i].p_vaddr);
-        printf("    Physical Address: %x\n", prog_hdr_arr[i].p_paddr);
+        printf("    Virtual Address: 0x%x\n", prog_hdr_arr[i].p_vaddr);
+        printf("    Physical Address: 0x%x\n", prog_hdr_arr[i].p_paddr);
         printf("    File Size: %x\n", prog_hdr_arr[i].p_filesz);
         printf("    Mem Size: %x\n", prog_hdr_arr[i].p_memsz);
         printf("    Align: %x\n", prog_hdr_arr[i].p_align);
@@ -69,7 +72,7 @@ void display_elf_header(elf64header_s* elf_hdr){
     printf("    Section header string table index: %d\n\n", elf_hdr->e_shstrndx);
 }
 
-const char * elf_type_string(uint16_t type){
+const char * elf_type_string(uint32_t type){
     switch (type)
     {
     case 0:
@@ -85,8 +88,8 @@ const char * elf_type_string(uint16_t type){
     }
 }
 
-const char * elf_machine_string(uint16_t type){
-    switch (type)
+const char * elf_machine_string(uint32_t machine){
+    switch (machine)
     {
     case AMD_x86_64:
         return "Advanced Micro Devices x86_64";
@@ -101,7 +104,26 @@ const char * elf_machine_string(uint16_t type){
     }
 }
 
-const char * section_type_string(uint16_t type){
+const char * program_type_string(uint32_t type){
+    return NULL;
+}
+
+const char * section_flag_string(uint32_t flag){
+    switch (flag)
+    {
+    case SHF_ALLOC:
+        return "ALLOC (loaded into memory at runtime)";
+    case SHF_WRITE:
+        return "WRITE (contains data that should be writable at runtime)";
+    case SHF_EXECINSTR:
+        return "EXECINSTR (contains executable machine instructions)";
+    default:{
+        return "UNKNOWN";
+    }
+    }
+}
+
+const char * section_type_string(uint32_t type){
     switch (type)
     {
     case SHT_NULL:
@@ -128,7 +150,10 @@ const char * section_type_string(uint16_t type){
         return "RESERVED";
     case SHT_DYNSYM:
         return "DYNSYM (Symbol Table)";
+    case SHT_GNU_HASH:
+        return ".gnu.hash";
     default:
+        return "UNKOWN";
         break;
     }
 }

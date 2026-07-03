@@ -44,7 +44,7 @@ int main(int argc, char *argv[]){
 
         elf64programheader_s prog_hdr_arr[num_prog_entries];
 
-        if(read_program_headers(fd, prog_hdr_arr, num_prog_entries, elf_hdr->e_phoff, elf_hdr->e_phentsize) < 0){
+        if(!read_program_headers(fd, prog_hdr_arr, num_prog_entries, elf_hdr->e_phoff, elf_hdr->e_phentsize)){
             printf("Failed to read in program headers\n");
             return -1;
         }
@@ -55,7 +55,7 @@ int main(int argc, char *argv[]){
 
         elf64sectionheader_s section_hdr_arr[num_section_entries];
 
-        if(read_section_headers(fd, section_hdr_arr, num_section_entries, elf_hdr->e_shoff, elf_hdr->e_shentsize) < 0){
+        if(!read_section_headers(fd, section_hdr_arr, num_section_entries, elf_hdr->e_shoff, elf_hdr->e_shentsize)){
             printf("Failed to read in section headers\n");
             return -1;
         }
@@ -69,7 +69,7 @@ int main(int argc, char *argv[]){
 
         elf64programheader_s prog_hdr_arr[num_prog_entries];
 
-        if(read_program_headers(fd, prog_hdr_arr, num_prog_entries, elf_hdr->e_phoff, elf_hdr->e_phentsize) < 0){
+        if(!read_program_headers(fd, prog_hdr_arr, num_prog_entries, elf_hdr->e_phoff, elf_hdr->e_phentsize)){
             printf("Failed to read in program headers\n");
             return -1;
         }
@@ -82,7 +82,7 @@ int main(int argc, char *argv[]){
 
         elf64sectionheader_s section_hdr_arr[num_section_entries];
 
-        if(read_section_headers(fd, section_hdr_arr, num_section_entries, elf_hdr->e_shoff, elf_hdr->e_shentsize) < 0){
+        if(!read_section_headers(fd, section_hdr_arr, num_section_entries, elf_hdr->e_shoff, elf_hdr->e_shentsize)){
             printf("Failed to read in section headers\n");
             return -1;
         }

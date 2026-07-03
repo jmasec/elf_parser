@@ -56,7 +56,6 @@ ELF Header:
 #define ELFDATA2LSB         1
 #define EV_CURRENT          1
 
-
 #define EI_NINDENT 16
 
 enum elf_types{
@@ -67,7 +66,7 @@ enum elf_types{
     ET_CORE
 };
 
-enum elf_indent{
+enum elf_ident{
     EI_MAG0,
     EI_MAG1,
     EI_MAG2,
@@ -80,11 +79,40 @@ enum elf_indent{
     EI_PAD
 };
 
+enum elf_dyn_types{
+    DT_NULL,
+    DT_NEEDED,
+    DT_PLTRELSZ, 
+    DT_PLTGOT, 
+    DT_HASH,
+    DT_STRTAB,
+    DT_SYMTAB,
+    DT_RELA, 
+    DT_RELASZ, 
+    DT_RELAENT, 
+    DT_STRSZ,
+    DT_SYMENT
+};
+
+enum elf_relocation_types_x86{
+    R_X86_64_RELATIVE,
+    R_X86_64_GLOB_DAT,
+    R_X86_64_JUMP_SLOT,
+    R_X86_64_64,
+    R_X86_64_COPY,
+    R_X86_64_DTPMOD64,
+    R_X86_64_DTPOFF64,
+    R_X86_64_TPOFF64,
+    R_X86_64_IRELATIVE
+};
+
 typedef uint16_t Elf64_Half;    // 2 bytes, unsigned
 typedef uint32_t Elf64_Word;    // 4 bytes, unsigned
+typedef int32_t Elf64_Sword;
 typedef uint64_t Elf64_Addr;    // 8 bytes, unsigned (virtual address)
 typedef uint64_t Elf64_Off;     // 8 bytes, unsigned (file offset)
 typedef uint64_t Elf64_Xword;   // 8 bytes, unsigned (extended word)
+typedef int64_t Elf64_Sxword;
 
 typedef struct {
 	uint8_t		e_ident[EI_NINDENT];
@@ -132,17 +160,6 @@ typedef struct elf64programheader_s{
 #define SHT_PROGBITS    1
 #define SHT_SYMTAB      2
 #define SHT_STRTAB      3
-#define SHT_RELA        4
-#define SHT_HASH        5
-#define SHT_DYNAMIC     6
-#define SHT_NOTE        7
-#define SHT_NOBITS      8
-#define SHT_REL         9
-#define SHT_SHLIB       10
-#define SHT_DYNSYM      11
-
-
-
 
 // sh_flags
 #define SHF_WRITE       1
@@ -163,5 +180,43 @@ typedef struct elf64sectionheader_s{
     Elf64_Xword  sh_addralign;
     Elf64_Xword  sh_entsize;
 }elf64sectionheader_s;
+
+
+typedef struct {
+	Elf64_Sxword	d_tag;
+   	union {
+   		Elf64_Xword	d_val;
+   		Elf64_Addr	d_ptr;
+	} d_un;
+} Elf64_Dyn;
+
+
+typedef struct {
+    Elf64_Addr r_offset;
+    Elf64_Xword r_info;
+    Elf64_Sxword r_addend;
+} Elf64_Rela;
+
+
+typedef struct {
+    Elf64_Addr r_offset;
+    Elf64_Xword r_info;
+} Elf64_Rel;
+
+// this is for future things, in memory vs from a file
+// right now I only support a file
+typedef enum elf_ptr_type_s{
+    ELF_FILE_DESCRIPTOR,
+    ELF_MEMORY_POINTER
+} elf_ptr_type_s;
+
+typedef struct elfptr_s{
+    elf_ptr_type_s type;
+    union {
+   		int	    e_fd;
+   		void*	e_ptr;
+	} edata;
+} elfptr_s;
+
 
 #endif
