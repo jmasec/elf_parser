@@ -18,77 +18,42 @@ int main(int argc, char *argv[]){
         return -1;
     }
 
-    // need more sanitization on file path input
-    int fd = open_elf_file(argv[2]);
-    if(fd < 0){
-        return -1;
-    }
-    printf("Opened ELF\n");
-
-    elf64header_s* elf_hdr = calloc(1, sizeof(elf64header_s));
-
-    if(!read_elf_header(fd, elf_hdr)){
-        perror("Failed to read in ELF header\n");
-        return -1;
-    }
-
-    printf("Read ELF Header\n");
+    elfinternal_s* elf_internal = calloc(sizeof(elfinternal_s), 1);
 
     switch (get_command(argv[1]))
     {
     case ALL: {
 
-        display_elf_header(elf_hdr);
+        parse_elf_internal(argv[2], ELF_FILE_DESCRIPTOR, elf_internal);
 
-        uint16_t num_prog_entries = elf_hdr->e_phnum;
+        display_elf_header(elf_internal->elf_hdr);
 
-        elf64programheader_s prog_hdr_arr[num_prog_entries];
+        display_program_headers(elf_internal->pgm_hdrs, elf_internal->elf_hdr->e_phnum);
 
-        if(!read_program_headers(fd, prog_hdr_arr, num_prog_entries, elf_hdr->e_phoff, elf_hdr->e_phentsize)){
-            printf("Failed to read in program headers\n");
-            return -1;
-        }
-
-        display_program_headers(prog_hdr_arr, num_prog_entries);
-
-        size_t num_section_entries = elf_hdr->e_shnum;
-
-        elf64sectionheader_s section_hdr_arr[num_section_entries];
-
-        if(!read_section_headers(fd, section_hdr_arr, num_section_entries, elf_hdr->e_shoff, elf_hdr->e_shentsize)){
-            printf("Failed to read in section headers\n");
-            return -1;
-        }
-
-        display_section_headers(section_hdr_arr, num_section_entries);
+        display_section_headers(elf_internal->sct_hdrs, elf_internal->elf_hdr->e_shnum);
 
         break;
     }
     case PROGRAM: {
-         uint16_t num_prog_entries = elf_hdr->e_phnum;
+        parse_elf_internal(argv[2], ELF_FILE_DESCRIPTOR, elf_internal);
 
-        elf64programheader_s prog_hdr_arr[num_prog_entries];
+        display_elf_header(elf_internal->elf_hdr);
 
-        if(!read_program_headers(fd, prog_hdr_arr, num_prog_entries, elf_hdr->e_phoff, elf_hdr->e_phentsize)){
-            printf("Failed to read in program headers\n");
-            return -1;
-        }
+        display_program_headers(elf_internal->pgm_hdrs, elf_internal->elf_hdr->e_phnum);
 
-        display_program_headers(prog_hdr_arr, num_prog_entries);
+        display_section_headers(elf_internal->sct_hdrs, elf_internal->elf_hdr->e_shnum);
         break;
     }
     case SECTION: {
-         size_t num_section_entries = elf_hdr->e_shnum;
-
-        elf64sectionheader_s section_hdr_arr[num_section_entries];
-
-        if(!read_section_headers(fd, section_hdr_arr, num_section_entries, elf_hdr->e_shoff, elf_hdr->e_shentsize)){
-            printf("Failed to read in section headers\n");
-            return -1;
+        if(!parse_elf_internal(argv[2], ELF_FILE_DESCRIPTOR, elf_internal)){
+            goto cleanup;
         }
 
-        display_section_headers(section_hdr_arr, num_section_entries);
-        break;
+        display_elf_header(elf_internal->elf_hdr);
+
+        display_program_headers(elf_internal->pgm_hdrs, elf_internal->elf_hdr->e_phnum);
+
+        display_section_headers(elf_internal->sct_hdrs, elf_internal->elf_hdr->e_shnum);
     }
     case HELP: {
         help();
@@ -98,6 +63,6 @@ int main(int argc, char *argv[]){
         break;
     }
 
-    free(elf_hdr);
-    close(fd);
+cleanup:
+    return -1;
 }

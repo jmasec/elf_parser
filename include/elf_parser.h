@@ -19,10 +19,10 @@ typedef struct elfinternal_s{
 } elfinternal_s;
 
 int open_elf_file(const char* elf_path);
-bool read_elf_header(int fd, elf64header_s* elf_hdr);
-bool read_section_headers(int fd, elf64sectionheader_s* section_hdr_arr, uint16_t num_entries, size_t section_hdr_offset, uint16_t sh_entsize);
-bool read_program_headers(int fd, elf64programheader_s* prog_hdr_arr, uint16_t num_entries, size_t prog_hdr_offset, uint16_t phent_size);
-bool parse_elf_internal(const char* elf, elfinternal_s* elf_internel, elf_ptr_type_s type);
+bool read_elf_header(elfptr_s* elf_ptr, elf64header_s* elf_hdr);
+bool read_section_headers(elfptr_s* elf_ptr, elf64sectionheader_s* section_hdr_arr, uint16_t num_entries, size_t section_hdr_offset, uint16_t sh_entsize);
+bool read_program_headers(elfptr_s* elf_ptr, elf64programheader_s* prog_hdr_arr, uint16_t num_entries, size_t prog_hdr_offset, uint16_t phent_size);
+bool parse_elf_internal(const char* elf, elf_ptr_type_s type, elfinternal_s* elf_internel);
 
 
 #endif
