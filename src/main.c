@@ -20,49 +20,42 @@ int main(int argc, char *argv[]){
 
     elfinternal_s* elf_internal = calloc(sizeof(elfinternal_s), 1);
 
+    parse_elf_internal(argv[2], ELF_FILE_DESCRIPTOR, elf_internal);
+
+    if(NULL == elf_internal){
+        return -1;
+    }
+
     switch (get_command(argv[1]))
     {
     case ALL: {
 
-        parse_elf_internal(argv[2], ELF_FILE_DESCRIPTOR, elf_internal);
-
         display_elf_header(elf_internal->elf_hdr);
 
         display_program_headers(elf_internal->pgm_hdrs, elf_internal->elf_hdr->e_phnum);
 
         display_section_headers(elf_internal->sct_hdrs, elf_internal->elf_hdr->e_shnum);
 
-        break;
+        return 0;
     }
     case PROGRAM: {
-        parse_elf_internal(argv[2], ELF_FILE_DESCRIPTOR, elf_internal);
-
-        display_elf_header(elf_internal->elf_hdr);
 
         display_program_headers(elf_internal->pgm_hdrs, elf_internal->elf_hdr->e_phnum);
 
-        display_section_headers(elf_internal->sct_hdrs, elf_internal->elf_hdr->e_shnum);
-        break;
+        return 0;
     }
     case SECTION: {
-        if(!parse_elf_internal(argv[2], ELF_FILE_DESCRIPTOR, elf_internal)){
-            goto cleanup;
-        }
-
-        display_elf_header(elf_internal->elf_hdr);
-
-        display_program_headers(elf_internal->pgm_hdrs, elf_internal->elf_hdr->e_phnum);
 
         display_section_headers(elf_internal->sct_hdrs, elf_internal->elf_hdr->e_shnum);
+        
+        return 0;
     }
     case HELP: {
         help();
-        break;
+        return 0;
     }
     default:
-        break;
+        return -1;
     }
 
-cleanup:
-    return -1;
 }

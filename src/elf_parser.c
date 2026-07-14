@@ -60,10 +60,6 @@ bool read_program_headers(elfptr_s* elf_ptr, elf64programheader_s* prog_hdr_arr,
         for(int i = 0; i < num_entries; i++){
             memcpy(&prog_hdr_arr[i], (elf_ptr->edata.e_ptr + prog_hdr_offset), phent_size);
 
-            if(NULL == &prog_hdr_arr[i]){
-                printf("Error reading in number:%d program header", i);
-                return false;
-            }
             prog_hdr_offset += phent_size;
         }
 
@@ -118,7 +114,7 @@ out: elf_internel -> struct to hold information about the elf executable
 */
 bool parse_elf_internal(const char* elf, elf_ptr_type_s type, elfinternal_s* elf_internel){
     elf64header_s* elf_header = NULL;
-    elf64programheader_s* prg_hdrs = NULL;
+    elf64programheader_s* pgm_hdrs = NULL;
     elf64sectionheader_s* sct_hdrs = NULL;
     elfptr_s* elf_ptr = NULL;
     int num_prg_hdrs = 0;
@@ -139,7 +135,7 @@ bool parse_elf_internal(const char* elf, elf_ptr_type_s type, elfinternal_s* elf
             elf_ptr->type = ELF_FILE_DESCRIPTOR;
             elf_ptr->edata.e_fd = fd;
 
-            elf_header = malloc(sizeof(elf_header));
+            elf_header = malloc(sizeof(elf64header_s));
             if(!read_elf_header(elf_ptr, elf_header)){
                 printf("Failed to read in ELF header\n");
                 goto cleanup;
@@ -148,13 +144,13 @@ bool parse_elf_internal(const char* elf, elf_ptr_type_s type, elfinternal_s* elf
             printf("Read ELF Header\n");
 
             // need to he lengths from elf header
-            elf64programheader_s* pgm_hdrs = calloc(elf_header->e_phnum, sizeof(elf64programheader_s));
+            pgm_hdrs = calloc(elf_header->e_phnum, sizeof(elf64programheader_s));
             if(!read_program_headers(elf_ptr, pgm_hdrs, elf_header->e_phnum, elf_header->e_phoff, elf_header->e_phentsize)){
                 goto cleanup;
             }
 
-            elf64sectionheader_s* sct_hdrs = calloc(elf_header->e_shnum, sizeof(elf64sectionheader_s));
-            if(!read_section_headers(elf_ptr, sct_hdrs, num_sct_hdrs, elf_header->e_shoff, elf_header->e_shnum)){
+            sct_hdrs = calloc(elf_header->e_shnum, sizeof(elf64sectionheader_s));
+            if(!read_section_headers(elf_ptr, sct_hdrs, elf_header->e_shnum, elf_header->e_shoff, elf_header->e_shentsize)){
                 goto cleanup;
             }
             break;
@@ -189,14 +185,14 @@ bool parse_elf_internal(const char* elf, elf_ptr_type_s type, elfinternal_s* elf
     }
     elf_internel->elf_ptr = elf_ptr;
     elf_internel->elf_hdr = elf_header;
-    elf_internel->pgm_hdrs = prg_hdrs;
+    elf_internel->pgm_hdrs = pgm_hdrs;
     elf_internel->sct_hdrs = sct_hdrs;
 
     return true;
 
 cleanup:
     free(elf_header);
-    free(prg_hdrs);
+    free(pgm_hdrs);
     free(sct_hdrs);
     return false;
 }

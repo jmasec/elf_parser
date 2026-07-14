@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <sys/mman.h>
 #include <stdbool.h>
+#include <string.h>
 #include "elf.h"
 
 typedef struct elfinternal_s{
