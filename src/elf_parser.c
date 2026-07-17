@@ -17,7 +17,7 @@ bool read_elf_header(elfptr_s* elf_ptr, elf64header_s* elf_hdr){
     case ELF_FILE_DESCRIPTOR: {
         ssize_t num_bytes = pread(elf_ptr->edata.e_fd, elf_hdr, sizeof(elf64header_s), 0);
 
-        if (num_bytes < 0 || num_bytes == 0){
+        if (num_bytes < 0 || num_bytes != elf_hdr->e_ehsize){
             printf("Nothing was read, ELF read failed");
             return false;
         }
@@ -47,7 +47,7 @@ bool read_program_headers(elfptr_s* elf_ptr, elf64programheader_s* prog_hdr_arr,
     case ELF_FILE_DESCRIPTOR:{
         for(int i = 0; i < num_entries; i++){
             ssize_t num_bytes = pread(elf_ptr->edata.e_fd, &prog_hdr_arr[i], phent_size, prog_hdr_offset);
-            if(num_bytes < 0){
+            if(num_bytes < 0 || num_bytes != phent_size){
                 perror("Error reading program headers\n");
                 return false;
             }
@@ -78,7 +78,7 @@ bool read_section_headers(elfptr_s* elf_ptr, elf64sectionheader_s* section_hdr_a
     case ELF_FILE_DESCRIPTOR:{
         for(int i = 0; i < num_entries; i++){
             ssize_t num_bytes = pread(elf_ptr->edata.e_fd, &section_hdr_arr[i], sh_entsize, section_hdr_offset);
-            if(num_bytes < 0){
+            if(num_bytes < 0 || num_bytes != sh_entsize){
                 perror("Error reading section headers\n");
                 return false;
             }
@@ -91,10 +91,6 @@ bool read_section_headers(elfptr_s* elf_ptr, elf64sectionheader_s* section_hdr_a
         for(int i = 0; i < num_entries; i++){
             memcpy(&section_hdr_arr[i], (elf_ptr->edata.e_ptr + section_hdr_offset), sh_entsize);
 
-            if(NULL == &section_hdr_arr[i]){
-                printf("Error reading in number:%d program header", i);
-                return false;
-            }
             section_hdr_offset += sh_entsize;
         }
 
@@ -145,11 +141,17 @@ bool parse_elf_internal(const char* elf, elf_ptr_type_s type, elfinternal_s* elf
 
             // need to he lengths from elf header
             pgm_hdrs = calloc(elf_header->e_phnum, sizeof(elf64programheader_s));
+            if (pgm_hdrs == NULL){
+                perror("Error Allocating Program Segments Array: ");
+            }
             if(!read_program_headers(elf_ptr, pgm_hdrs, elf_header->e_phnum, elf_header->e_phoff, elf_header->e_phentsize)){
                 goto cleanup;
             }
 
             sct_hdrs = calloc(elf_header->e_shnum, sizeof(elf64sectionheader_s));
+            if (sct_hdrs == NULL){
+                perror("Error Allocating Section Segments Array: ");
+            }
             if(!read_section_headers(elf_ptr, sct_hdrs, elf_header->e_shnum, elf_header->e_shoff, elf_header->e_shentsize)){
                 goto cleanup;
             }
@@ -165,21 +167,30 @@ bool parse_elf_internal(const char* elf, elf_ptr_type_s type, elfinternal_s* elf
             elf_ptr->type = ELF_MEMORY_POINTER;
             elf_ptr->edata.e_ptr = elf;
 
-            elf_header = malloc(sizeof(elf_header));
+            elf_header = malloc(sizeof(elf64header_s));
             if(!read_elf_header(elf_ptr, elf_header)){
                 goto cleanup;
             }
 
             // need to he lengths from elf header
-            elf64programheader_s* pgm_hdrs = calloc(elf_header->e_phnum, sizeof(elf64programheader_s));
+            pgm_hdrs = calloc(elf_header->e_phnum, sizeof(elf64programheader_s));
             if(!read_program_headers(elf_ptr, pgm_hdrs, elf_header->e_phnum, elf_header->e_phoff, elf_header->e_phentsize)){
                 goto cleanup;
             }
-
-            elf64sectionheader_s* sct_hdrs = calloc(elf_header->e_shnum, sizeof(elf64sectionheader_s));
-            if(!read_section_headers(elf_ptr, num_sct_hdrs, elf_header->e_shnum, elf_header->e_shoff, elf_header->e_shentsize)){
+            if(NULL == pgm_hdrs){
+                printf("Failed reading in Program Segments\n");
                 goto cleanup;
             }
+
+            sct_hdrs = calloc(elf_header->e_shnum, sizeof(elf64sectionheader_s));
+            if(!read_section_headers(elf_ptr, sct_hdrs, elf_header->e_shnum, elf_header->e_shoff, elf_header->e_shentsize)){
+                goto cleanup;
+            }
+            if(NULL == sct_hdrs){
+                printf("Failed reading in Section Segments");
+                goto cleanup;
+            }
+
             break;
         }
     }

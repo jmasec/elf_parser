@@ -157,11 +157,14 @@ void display_elf_header(elf64header_s* elf_hdr){
 }
 
 void help(){
-    printf("-[ARG] [EXECUTABLE PATH]\n");
+    printf("-[ARG] -[ELF_TYPE] [EXECUTABLE PATH IF FILE]\n");
     printf("Supported Args: -a , -p, -s\n");
     printf("-a ->  display all of the elf\n");
     printf("-p -> display program segments\n");
     printf("-s -> display section\n");
+    printf("Supported ELF Types: -f, -m\n");
+    printf("-f -> ELF File\n");
+    printf("-m -> C array of bytes, header needs to be included\n");
 }
 
 enum Command get_command(char * input_cmd){
@@ -180,6 +183,20 @@ enum Command get_command(char * input_cmd){
     else if(!strncmp(input_cmd, "-h", 2)){
         enum Command cmd = HELP;
         return cmd;
+    }
+    else{
+        return -1;
+    }
+}
+
+enum elf_ptr_type_s get_elf_type(char * input_type){
+    if(!strncmp(input_type, "-f", 2)){
+        enum elf_ptr_type_s type = ELF_FILE_DESCRIPTOR;
+        return type;
+    }
+    else if(!strncmp(input_type, "-m", 2)){
+        enum elf_ptr_type_s type = ELF_MEMORY_POINTER;
+        return type;
     }
     else{
         return -1;
