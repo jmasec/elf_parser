@@ -1,5 +1,6 @@
 #include "elf_parser.h"
 
+
 int open_elf_file(const char* elf_path){
     int fd = open(elf_path, O_RDONLY);
 
@@ -9,6 +10,20 @@ int open_elf_file(const char* elf_path){
     }
 
     return fd;
+}
+
+enum elf_ptr_type_s get_elf_type(char * input_type){
+    if(!strncmp(input_type, "-f", 2)){
+        enum elf_ptr_type_s type = ELF_FILE_DESCRIPTOR;
+        return type;
+    }
+    else if(!strncmp(input_type, "-m", 2)){
+        enum elf_ptr_type_s type = ELF_MEMORY_POINTER;
+        return type;
+    }
+    else{
+        return -1;
+    }
 }
 
 bool read_elf_header(elfptr_s* elf_ptr, elf64header_s* elf_hdr){

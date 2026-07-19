@@ -188,17 +188,3 @@ enum Command get_command(char * input_cmd){
         return -1;
     }
 }
-
-enum elf_ptr_type_s get_elf_type(char * input_type){
-    if(!strncmp(input_type, "-f", 2)){
-        enum elf_ptr_type_s type = ELF_FILE_DESCRIPTOR;
-        return type;
-    }
-    else if(!strncmp(input_type, "-m", 2)){
-        enum elf_ptr_type_s type = ELF_MEMORY_POINTER;
-        return type;
-    }
-    else{
-        return -1;
-    }
-}
